@@ -290,14 +290,25 @@ class GcodeVirtualSD(VirtualSD):
             self.gcode.register_command(cmd, getattr(self, 'cmd_' + cmd))
         for cmd in ['M28', 'M29', 'M30']:
             self.gcode.register_command(cmd, self.cmd_error)
-    def get_file_list(self):
-        dname = self.sdcard_dirname
+    def get_file_list(self, dname=None):
+        dname = dname or self.sdcard_dirname
+        files = []
         try:
-            filenames = os.listdir(self.sdcard_dirname)
-            return [(fname, os.path.getsize(os.path.join(dname, fname)))
-                    for fname in sorted(filenames, key=str.lower)
-                    if not fname.startswith('.')
-                    and os.path.isfile((os.path.join(dname, fname)))]
+            content = sorted(os.listdir(dname), key=str.lower)
+            for name in content:
+                path = os.path.join(dname, name)
+                if not name.startswith('.'): # Ignore hidden files and directories
+                    if os.path.isdir(path):
+                        # Recursive call
+                        # Add directory name every time so that the final list
+                        # is relative to the starting directory
+                        files.extend([(name + "/" + fname, fsize)
+                            for fname, fsize in self.list_files_recursively(path)])
+                    else:
+                        files.append((name, os.path.getsize(path)))
+            return files
+        except self.gcode.error: # Propagated from recursive calls, keep going
+            raise
         except:
             logging.exception("virtual_sdcard get_file_list")
             raise self.gcode.error("Unable to get file list")
