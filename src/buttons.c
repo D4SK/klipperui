@@ -113,8 +113,7 @@ command_buttons_query(uint32_t *args)
     sched_add_timer(&b->time);
 }
 DECL_COMMAND(command_buttons_query,
-             "buttons_query oid=%c clock=%u rest_ticks=%u retransmit_count=%c"
-             " invert=%c");
+    "buttons_query oid=%c clock=%u rest_ticks=%u retransmit_count=%c" " invert=%c");
 
 void
 command_buttons_ack(uint32_t *args)

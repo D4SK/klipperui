@@ -21,8 +21,7 @@ command_config_i2c(uint32_t *args)
                                      , sizeof(*i2c));
     i2c->i2c_config = i2c_setup(args[1], args[2], addr);
 }
-DECL_COMMAND(command_config_i2c,
-             "config_i2c oid=%c i2c_bus=%u rate=%u address=%u");
+DECL_COMMAND(command_config_i2c, "config_i2c oid=%c i2c_bus=%u rate=%u address=%u");
 
 void
 command_i2c_write(uint32_t *args)
@@ -75,5 +74,4 @@ command_i2c_modify_bits(uint32_t *args)
     }
     i2c_write(i2c->i2c_config, reg_len + data_len, receive_array);
 }
-DECL_COMMAND(command_i2c_modify_bits,
-             "i2c_modify_bits oid=%c reg=%*s clear_set_bits=%*s");
+DECL_COMMAND(command_i2c_modify_bits, "i2c_modify_bits oid=%c reg=%*s clear_set_bits=%*s");

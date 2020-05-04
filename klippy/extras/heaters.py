@@ -75,9 +75,7 @@ class Heater:
         pwm_time = read_time + self.pwm_delay
         self.next_pwm_time = pwm_time + 0.75 * MAX_HEAT_TIME
         self.last_pwm_value = value
-        logging.debug("%s: pwm=%.3f@%.3f (from %.3f@%.3f [%.3f])",
-                      self.name, value, pwm_time,
-                      self.last_temp, self.last_temp_time, self.target_temp)
+        logging.debug("%s: pwm=%.3f@%.3f (from %.3f@%.3f [%.3f])", self.name, value, pwm_time, self.last_temp, self.last_temp_time, self.target_temp)
         self.mcu_pwm.set_pwm(pwm_time, value)
     def temperature_callback(self, read_time, temp):
         with self.lock:
@@ -233,8 +231,8 @@ class PrinterHeaters:
         self.available_sensors = []
         self.has_started = False
         self.printer.register_event_handler("klippy:ready", self._handle_ready)
-        self.printer.register_event_handler("gcode:request_restart",
-                                            self.turn_off_all_heaters)
+        self.printer.register_event_handler("gcode:request_restart", self.turn_off_all_heaters)
+
         # Register commands
         gcode = self.printer.lookup_object('gcode')
         gcode.register_command("TURN_OFF_HEATERS", self.cmd_TURN_OFF_HEATERS,
