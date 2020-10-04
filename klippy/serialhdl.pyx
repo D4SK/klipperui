@@ -103,10 +103,8 @@ class SerialReader:
             self.background_thread = threading.Thread(target=self._bg_thread)
             self.background_thread.start()
             # Obtain and load the data dictionary from the firmware
-            start = self.reactor.monotonic()
             completion = self.reactor.register_callback(self._get_identify_data)
             identify_data = completion.wait(connect_time + 15.)
-            logging.info(f"Connection took {self.reactor.monotonic() - start} seconds")
             if identify_data is not None:
                 break
             logging.info("Timeout on serial connect")
