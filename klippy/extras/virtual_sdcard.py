@@ -31,8 +31,8 @@ class Printjob:
                 self.file_obj.seek(0, os.SEEK_END)
                 self.file_size = self.file_obj.tell()
                 self.file_obj.seek(0)
-            except:
-                logging.info("printjob_manager: couldn't open file {}".format(self.path))
+            except Exception as e:
+                logging.warning(f"printjob_manager: failed opening file {self.path}, with exception {e}")
                 self.set_state('stopped')
                 self.manager.check_queue()
         elif ext == '.ufp':
@@ -46,13 +46,13 @@ class Printjob:
                     self.file_size = self.file_obj.tell()
                     self.file_obj.seek(0)
             except Exception as e:
-                logging.debug("printjob_manager: couldn't open compressed file {}, exception {}".format(self.path, e))
+                logging.warning(f"printjob_manager: failed opening compressed file {self.path}, with exception {e}")
                 self.set_state('stopped')
 
     def set_state(self, state):
         if self.state != state:
             self.state = state
-            self.printer.send_event("virtual_sdcard:printjob_change")
+            self.printer.send_event("virtual_sdcard:printjob_change", self.manager.jobs)
 
     def start(self):
         if self.state == 'queued':
@@ -62,15 +62,15 @@ class Printjob:
                 self.work_timer = self.reactor.register_timer(self.work_handler, self.reactor.NOW)
             else:
                 self.set_state('paused')
-            self.printer.send_event("virtual_sdcard:printjob_started", self.path, self.state)
+            self.printer.send_event("virtual_sdcard:printjob_start", self)
 
     def resume(self):
         if self.state == 'pausing':
             self.set_state('printing')
         elif self.state == 'paused':
             if self.saved_pause_state:
-                self.gcode.cmd_RESTORE_GCODE_STATE({'NAME':"PAUSE_STATE", 'MOVE':1})
                 self.saved_pause_state = False
+                self.gcode.run_script_from_command("RESTORE_GCODE_STATE STATE=PAUSE_STATE MOVE=1")
             self.set_state('printing')
             self.start_stop_times.append([self.toolhead.mcu.estimated_print_time(self.reactor.monotonic()), None])
             self.work_timer = self.reactor.register_timer(self.work_handler, self.reactor.NOW)
@@ -84,15 +84,15 @@ class Printjob:
             self.set_state('stopping')
             # turn off heaters so stopping doesn't wait for temperature requests
             self.reactor.pause(self.reactor.monotonic() + 0.100)
-            self.heater_manager.cmd_TURN_OFF_HEATERS({})
+            self.heater_manager.cmd_TURN_OFF_HEATERS(None)
         else: # in case it is paused we need to do all stopping actions here
             self.set_state('stopped')
             self.file_obj.close()
-            self.heater_manager.cmd_TURN_OFF_HEATERS({})
+            self.heater_manager.cmd_TURN_OFF_HEATERS(None)
             self.manager.check_queue()
 
     def work_handler(self, eventtime):
-        logging.info("Printjob entering work handler (position %d)", self.file_position)
+        logging.info(f"Printjob entering work handler (position {self.file_position})")
         self.reactor.unregister_timer(self.work_timer)
         try:
             self.file_obj.seek(self.file_position)
@@ -117,7 +117,7 @@ class Printjob:
                 if not data:
                     # End of file
                     self.set_state('done')
-                    self.gcode.respond("Done printing file")
+                    self.gcode.respond_raw("Done printing file")
                     break
                 lines = data.split('\n')
                 lines[0] = partial_input + lines[0]
@@ -144,13 +144,13 @@ class Printjob:
         # Finish stopping or pausing actions
         if self.state == 'pausing':
             self.set_state('paused')
-            self.gcode.cmd_SAVE_GCODE_STATE({'NAME': "PAUSE_STATE"})
+            self.gcode.run_script_from_command("SAVE_GCODE_STATE STATE=PAUSE_STATE")
             self.saved_pause_state = True
         else:
             if self.state == 'stopping':
                 self.set_state('stopped')
             self.file_obj.close()
-            self.heater_manager.cmd_TURN_OFF_HEATERS({})
+            self.heater_manager.cmd_TURN_OFF_HEATERS(None)
             self.manager.check_queue()
         return self.reactor.NEVER
 
@@ -165,7 +165,7 @@ class Printjob:
         return printed_time
 
 
-class PrintjobManager(object):
+class PrintjobManager:
     def __init__(self, config):
         self.toolhead = None
         self.printer = config.get_printer()
@@ -178,28 +178,32 @@ class PrintjobManager(object):
 
     def add_printjob(self, path, paused=True):
         """ add new printjob to queue """
-        self.jobs.append(Printjob(path, paused, self))
+        job = Printjob(path, paused, self)
+        self.jobs.append(job)
+        self.printer.send_event("virtual_sdcard:printjob_change", self.jobs)
+        self.printer.send_event("virtual_sdcard:printjob_added", job)
         self.check_queue()
 
-    def pause_printjob(self):
+    def pause_printjob(self, *args):
         self.jobs[0].pause()
 
-    def stop_printjob(self):
+    def stop_printjob(self, *args):
         self.jobs[0].stop()
 
-    def resume_printjob(self):
+    def resume_printjob(self, *args):
         self.jobs[0].resume()
 
     def clear_queue(self):
         """ remove everything but the first element wich is currently being printed """
         self.jobs = self.jobs[:1]
+        self.printer.send_event("virtual_sdcard:printjob_change", self.jobs)
 
     def check_queue(self):
-        """ remove 'stopped' or 'done' printjobs from queue, start next if necessary """ 
+        """ remove 'stopped' or 'done' printjobs from queue, start next if necessary """
         if len(self.jobs) and self.jobs[0].state in ('done', 'stopped'):
-            last = self.jobs.pop(0)
-            self.printer.send_event("virtual_sdcard:printjob_ended", last.path, last.state)
-            self.printer.send_event("virtual_sdcard:printjob_change")
+            last_job = self.jobs.pop(0)
+            self.printer.send_event("virtual_sdcard:printjob_change", self.jobs)
+            self.printer.send_event("virtual_sdcard:printjob_end", last_job)
         if len(self.jobs) and self.jobs[0].state in ('queued'):
             self.jobs[0].start()
 
@@ -220,28 +224,30 @@ class PrintjobManager(object):
             except:
                 logging.exception("virtual_sdcard shutdown read")
                 return
-            logging.info("Virtual sdcard (%d): %s\nUpcoming (%d): %s",
-                         readpos, repr(data[:readcount]),
-                         self.jobs[0].file_position, repr(data[readcount:]))
+            logging.info(f"Virtual sdcard ({readpos}): { repr(data[:readcount]) }\n\
+                           Upcoming ({self.jobs[0].file_position}): { repr(data[readcount:]) }")
 
     def stats(self, eventtime):
         if len(self.jobs) and self.jobs[0].state in ('printing', 'pausing', 'stopping'):
-            return True, "sd_pos=%d" % (self.jobs[0].file_position,)
+            return True, f"sd_pos={self.jobs[0].file_position}"
         return False, ""
 
 
 class VirtualSD(PrintjobManager):
     def __init__(self, config):
-        super(VirtualSD, self).__init__(config)
+        super().__init__(config)
         self.selected_file = None # str
         sd_path = config.get('path')
         self.sdcard_dirname = os.path.normpath(os.path.expanduser(sd_path))
+        self.gcode.register_command("PAUSE", self.pause_printjob)
+        self.gcode.register_command("RESUME", self.resume_printjob)
+        self.gcode.register_command("STOP", self.stop_printjob)
         self.gcode.register_command('M21', None)
-
-        for cmd in ['M20', 'M21', 'M23', 'M24', 'M25', 'M26', 'M27']:
+        for cmd in ('M20', 'M21', 'M23', 'M24', 'M25', 'M26', 'M27'):
             self.gcode.register_command(cmd, getattr(self, 'cmd_' + cmd))
-        for cmd in ['M28', 'M29', 'M30']:
+        for cmd in ('M28', 'M29', 'M30'):
             self.gcode.register_command(cmd, self.cmd_error)
+
     def get_file_list(self):
         dname = self.sdcard_dirname
         try:
@@ -260,14 +266,14 @@ class VirtualSD(PrintjobManager):
     def cmd_M20(self, params):
         # List SD card
         files = self.get_file_list()
-        self.gcode.respond_raw("Begin file list")
+        gcmd.respond_raw("Begin file list")
         for fname, fsize in files:
-            self.gcode.respond_raw("%s %d" % (fname, fsize))
-        self.gcode.respond_raw("End file list")
-    def cmd_M21(self, params):
+            gcmd.respond_raw("%s %d" % (fname, fsize))
+        gcmd.respond_raw("End file list")
+    def cmd_M21(self, gcmd):
         # Initialize SD card
-        self.gcode.respond_raw("SD card ok")
-    def cmd_M23(self, params):
+        gcmd.respond_raw("SD card ok")
+    def cmd_M23(self, gcmd):
         # Select SD file
         # parses filename
         try:
@@ -276,14 +282,14 @@ class VirtualSD(PrintjobManager):
             if '*' in filename:
                 filename = filename[:filename.find('*')].strip()
         except:
-            raise self.gcode.error("Unable to extract filename")
+            raise gcmd.error("Unable to extract filename")
         if filename.startswith('/'):
             filename = filename[1:]
-        files = self.get_file_list()
+        files = self.get_file_list(check_subdirs)
         files_by_lower = { fname.lower(): fname for fname, fsize in files }
         filename = files_by_lower[filename.lower()]
         self.selected_file = os.path.join(self.sdcard_dirname, filename)
-        self.gcode.respond("File {} selected".format(filename))
+        self.gcode.respond_raw(f"File {filename} selected")
     def cmd_M24(self, params):
         # Start/resume SD print
         if self.state == 'paused':
@@ -305,10 +311,10 @@ class VirtualSD(PrintjobManager):
     def cmd_M27(self, params):
         # Report SD print status
         if self.state == 'printing':
-            self.gcode.respond("SD printing byte %d/%d" % (
+            self.gcode.respond_raw("SD printing byte %d/%d" % (
             self.jobs[0].file_position, self.file_size))
         else:
-            self.gcode.respond("SD print {}".format(self.state))
+            self.gcode.respond_raw(f"SD print {self.state}")
 
 def load_config(config):
     return VirtualSD(config)

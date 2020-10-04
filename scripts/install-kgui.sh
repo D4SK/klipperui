@@ -3,17 +3,8 @@
 
 # Find SRCDIR from the pathname of this script
 SRCDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )"/.. && pwd )"
+# Directory for the virtual environment
 PYTHONDIR="${SRCDIR}/klippy-environment"
-
-
-
-# Must be called before install_packages
-setup_port_redirection()
-{
-    sudo iptables -A PREROUTING -t nat -p tcp --dport 80 -j REDIRECT --to-ports 8080
-    echo iptables-persistent iptables-persistent/autosave_v4 boolean true | sudo debconf-set-selections
-    echo iptables-persistent iptables-persistent/autosave_v6 boolean false | sudo debconf-set-selections
-}
 
 
 
@@ -28,8 +19,9 @@ install_packages()
     # AVR chip installation and building
     PKGLIST="${PKGLIST} avrdude gcc-avr binutils-avr avr-libc"
     # ARM chip installation and building
-    PKGLIST="${PKGLIST} stm32flash dfu-util libnewlib-arm-none-eabi"
+    PKGLIST="${PKGLIST} dfu-util libnewlib-arm-none-eabi"
     PKGLIST="${PKGLIST} gcc-arm-none-eabi binutils-arm-none-eabi"
+    # PKGLIST="${PKGLIST} stm32flash" has to be installed from source to inclde latest MCUs
 
     # Kivy https://github.com/kivy/kivy/doc/sources/installation/installation-rpi.rst
     PKGLIST="${PKGLIST} \
@@ -60,8 +52,6 @@ install_packages()
     # Kivy Raspberry 4 specifics
     PKGLIST="${PKGLIST} \
     libfreetype6-dev \
-    libgl1-mesa-dev \
-    libgles2-mesa-dev \
     libdrm-dev \
     libgbm-dev \
     libudev-dev \
@@ -97,23 +87,35 @@ install_packages()
     PKGLIST="${PKGLIST} libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev"
 
     # Wifi
-    PKGLIST="${PKGLIST} network-manager"
+    PKGLIST="${PKGLIST} network-manager python3-gi"
     # Usb Stick Automounting
     PKGLIST="${PKGLIST} usbmount"
-    # Cura connection
-    PKGLIST="${PKGLIST} iptables-persistent"
 
     # Update system package info
-    report_status "Running apt-get update..."
-    sudo apt update
+    report_status "Updating package database..."
+    sudo apt-get -qq --yes update
     # Install desired packages
     report_status "Installing packages..."
-    sudo apt install --yes ${PKGLIST}
+    sudo apt-get install -qq --yes ${PKGLIST}
 
-    # Wifi 
-    sudo apt purge dhcpcd5 --yes
+    # Install stm32flash from source
+    report_status "Installing stm32flash from source..."
+    cd ~
+    rm -rf stm32flash-code
+    git clone https://git.code.sf.net/p/stm32flash/code stm32flash-code
+    cd stm32flash-code
+    make
+    sudo make install
+
+    report_status "Adjusting configurations..."
+    # Networking
+    sudo apt-get -qq --yes purge dhcpcd5
+    # Needed to allow wifi scanning to non-root users. Probably not needed with NM >= 1.16
+    # Adds option "auth-polkit=false" in [main] section if it doesn't exist already
+    if [ $(grep -c auth-polkit= /etc/NetworkManager/NetworkManager.conf) -eq 0 ]; then
+        sudo sed -i '/\[main\]/a auth-polkit=false' /etc/NetworkManager/NetworkManager.conf
+    fi
     # change line in Xwrapper.config so xorg feels inclined to start when asked by systemd
-    report_status "Xwrapper config mod..."
     sudo sed -i 's/allowed_users=console/allowed_users=anybody/' /etc/X11/Xwrapper.config
     # -i for in place (just modify file), s for substitute (this line)
 }
@@ -126,16 +128,18 @@ create_virtualenv()
     report_status "Updating python virtual environment..."
     # Create virtualenv if it doesn't already exist
     [ ! -d ${PYTHONDIR} ] && python3 -m venv ${PYTHONDIR}
-    report_status "install pip packages..."
-    # Install/update dependencies                             v  custom KGUI list of pip packages
-    ${PYTHONDIR}/bin/pip3 install -r ${SRCDIR}/scripts/klippy-kgui-requirements.txt
+    report_status "Installing pip packages..."
+    # Install/update dependencies                      v  custom KGUI list of pip packages
+    ${PYTHONDIR}/bin/pip3 install -q -r ${SRCDIR}/scripts/klippy-kgui-requirements.txt
+    # Use the python-gi module from the system installation
+    ln -sf /usr/lib/python3/dist-packages/gi ${PYTHONDIR}/lib/python3.?/site-packages/
 }
 
 
 
 install_klipper_service()
 {
-    report_status "Install klipper systemd service..."
+    report_status "Installing systemd service klipper.service..."
     sudo /bin/sh -c "cat > /etc/systemd/system/klipper.service" <<EOF
 [Unit]
 Description="Klipper with GUI running in Xorg"
@@ -145,7 +149,7 @@ Type=simple
 User=$USER
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ExecStart=/bin/bash -c "/usr/bin/startx ${PYTHONDIR}/bin/python3 ${SRCDIR}/klippy/klippy.py ${HOME}/printer.cfg -v -l /tmp/klippy.log"
-Nice=-20
+Nice=-19
 Restart=always
 RestartSec=10
 [Install]
@@ -161,12 +165,12 @@ EOF
 
 install_usb_automounting()
 {
-    report_status "Install usbmount.conf..."
+    report_status "Configuring USB automounting..."
     mkdir -p ~/sdcard/USB-Device
     sudo cp ${SRCDIR}/klippy/extras/kgui/usbmount.conf /etc/usbmount/usbmount.conf
     # https://raspberrypi.stackexchange.com/questions/100312/raspberry-4-usbmount-not-working
     # https://www.oguska.com/blog.php?p=Using_usbmount_with_ntfs_and_exfat_filesystems
-    
+
     # maybe needed
     sudo sed -i 's/PrivateMounts=yes/PrivateMounts=no/' /lib/systemd/system/systemd-udevd.service
 }
@@ -177,11 +181,10 @@ install_usb_automounting()
 # Use custom install script in kgui directory
 install_lcd_driver()
 {
+    report_status "Installing Display Driver..."
     # Kivy: Add user to render group to give permission for hardware rendering
     sudo adduser "$USER" render
 
-
-    report_status "Installing LCD Driver..."
     sudo ${SRCDIR}/klippy/extras/kgui/LCDC7-better.sh -r 90
     # Copy the dpms configuration
     sudo cp ${SRCDIR}/klippy/extras/kgui/10-dpms.conf /etc/X11/xorg.conf.d/
@@ -192,7 +195,7 @@ install_lcd_driver()
 # Helper functions
 report_status()
 {
-    echo -e "\n\n###### $1"
+    echo -e "\n===> $1"
 }
 verify_ready()
 {
@@ -208,9 +211,10 @@ set -e
 
 # Run installation steps defined above
 verify_ready
-setup_port_redirection
 install_packages
 create_virtualenv
 install_klipper_service
 install_usb_automounting
 install_lcd_driver
+
+report_status "Installation completed successfully. Reboot for the changes to take effect"

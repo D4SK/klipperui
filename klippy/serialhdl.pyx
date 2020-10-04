@@ -61,7 +61,7 @@ class SerialReader:
                 logging.exception("Exception in serial callback")
     def _get_identify_data(self, eventtime):
         # Query the "data dictionary" from the micro-controller
-        identify_data = ""
+        identify_data = b""
         while 1:
             msg = "identify offset=%d count=%d" % (len(identify_data), 40)
             try:
@@ -174,12 +174,11 @@ class SerialReader:
         completion = self.reactor.completion()
         self.pending_notifications[nid] = completion
         self.ffi_lib.serialqueue_send(self.serialqueue, cmd_queue,
-                                    cmd, len(cmd), minclock, reqclock, nid)
+                                      cmd, len(cmd), minclock, reqclock, nid)
         params = completion.wait()
         if params is None:
             raise error("Serial connection closed")
         return params
-
     def send(self, msg, minclock=0, reqclock=0):
         cmd = self.msgparser.create_command(msg)
         self.raw_send(cmd, minclock, reqclock, self.default_cmd_queue)
