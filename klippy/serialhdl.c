@@ -1181,28 +1181,6 @@ static PyObject* __Pyx_PyFloat_AddObjC(PyObject *op1, PyObject *op2, double floa
 /* RaiseException.proto */
 static void __Pyx_Raise(PyObject *type, PyObject *value, PyObject *tb, PyObject *cause);
 
-/* PyObjectFormatSimple.proto */
-#if CYTHON_COMPILING_IN_PYPY
-    #define __Pyx_PyObject_FormatSimple(s, f) (\
-        likely(PyUnicode_CheckExact(s)) ? (Py_INCREF(s), s) :\
-        PyObject_Format(s, f))
-#elif PY_MAJOR_VERSION < 3
-    #define __Pyx_PyObject_FormatSimple(s, f) (\
-        likely(PyUnicode_CheckExact(s)) ? (Py_INCREF(s), s) :\
-        likely(PyString_CheckExact(s)) ? PyUnicode_FromEncodedObject(s, NULL, "strict") :\
-        PyObject_Format(s, f))
-#elif CYTHON_USE_TYPE_SLOTS
-    #define __Pyx_PyObject_FormatSimple(s, f) (\
-        likely(PyUnicode_CheckExact(s)) ? (Py_INCREF(s), s) :\
-        likely(PyLong_CheckExact(s)) ? PyLong_Type.tp_str(s) :\
-        likely(PyFloat_CheckExact(s)) ? PyFloat_Type.tp_str(s) :\
-        PyObject_Format(s, f))
-#else
-    #define __Pyx_PyObject_FormatSimple(s, f) (\
-        likely(PyUnicode_CheckExact(s)) ? (Py_INCREF(s), s) :\
-        PyObject_Format(s, f))
-#endif
-
 /* None.proto */
 static CYTHON_INLINE void __Pyx_RaiseUnboundLocalError(const char *varname);
 
@@ -1549,7 +1527,6 @@ static const char __pyx_k_msgdata[] = "msgdata";
 static const char __pyx_k_prepare[] = "__prepare__";
 static const char __pyx_k_reactor[] = "reactor";
 static const char __pyx_k_retries[] = "retries";
-static const char __pyx_k_seconds[] = " seconds";
 static const char __pyx_k_timeout[] = "timeout";
 static const char __pyx_k_unknown[] = "#unknown";
 static const char __pyx_k_baudrate[] = "baudrate";
@@ -1622,7 +1599,6 @@ static const char __pyx_k_last_notify_id[] = "last_notify_id";
 static const char __pyx_k_receive_time_2[] = "receive_time";
 static const char __pyx_k_receive_window[] = "receive_window";
 static const char __pyx_k_stk500v2_leave[] = "stk500v2_leave";
-static const char __pyx_k_Connection_took[] = "Connection took ";
 static const char __pyx_k_SerialException[] = "SerialException";
 static const char __pyx_k_handle_callback[] = "handle_callback";
 static const char __pyx_k_identify_offset[] = "identify offset=";
@@ -1699,7 +1675,6 @@ static const char __pyx_k_SerialRetryCommand_handle_callba[] = "SerialRetryComma
 static const char __pyx_k_Starting_stk500v2_leave_programm[] = "Starting stk500v2 leave programmer sequence";
 static const char __pyx_k_Unknown_message_d_len_d_while_id[] = "Unknown message %d (len %d) while identifying";
 static PyObject *__pyx_n_s_BITS_PER_BYTE;
-static PyObject *__pyx_kp_u_Connection_took;
 static PyObject *__pyx_kp_u_Dumping_receive_queue;
 static PyObject *__pyx_kp_u_Dumping_send_queue;
 static PyObject *__pyx_kp_u_Dumping_serial_stats;
@@ -1907,7 +1882,6 @@ static PyObject *__pyx_n_s_rts;
 static PyObject *__pyx_kp_u_s_s;
 static PyObject *__pyx_n_s_scount;
 static PyObject *__pyx_n_s_sdata;
-static PyObject *__pyx_kp_u_seconds;
 static PyObject *__pyx_n_s_self;
 static PyObject *__pyx_n_s_send;
 static PyObject *__pyx_n_s_send_with_response;
@@ -3946,7 +3920,6 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_6connect(CYTHON_UNUSED PyObj
   PyObject *__pyx_v_start_time = NULL;
   PyObject *__pyx_v_connect_time = NULL;
   PyObject *__pyx_v_e = NULL;
-  PyObject *__pyx_v_start = NULL;
   PyObject *__pyx_v_completion = NULL;
   PyObject *__pyx_v_identify_data = NULL;
   PyObject *__pyx_v_msgparser = NULL;
@@ -3975,9 +3948,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_6connect(CYTHON_UNUSED PyObj
   PyObject *__pyx_t_18 = NULL;
   PyObject *__pyx_t_19 = NULL;
   PyObject *__pyx_t_20 = NULL;
-  Py_ssize_t __pyx_t_21;
-  Py_UCS4 __pyx_t_22;
-  int __pyx_t_23;
+  int __pyx_t_21;
   __Pyx_RefNannySetupContext("connect", 0);
 
   /* "serialhdl.pyx":80
@@ -4736,7 +4707,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_6connect(CYTHON_UNUSED PyObj
  *             self.background_thread = threading.Thread(target=self._bg_thread)
  *             self.background_thread.start()             # <<<<<<<<<<<<<<
  *             # Obtain and load the data dictionary from the firmware
- *             start = self.reactor.monotonic()
+ *             completion = self.reactor.register_callback(self._get_identify_data)
  */
     __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_background_thread); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 104, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
@@ -4763,185 +4734,79 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_6connect(CYTHON_UNUSED PyObj
     /* "serialhdl.pyx":106
  *             self.background_thread.start()
  *             # Obtain and load the data dictionary from the firmware
- *             start = self.reactor.monotonic()             # <<<<<<<<<<<<<<
- *             completion = self.reactor.register_callback(self._get_identify_data)
+ *             completion = self.reactor.register_callback(self._get_identify_data)             # <<<<<<<<<<<<<<
  *             identify_data = completion.wait(connect_time + 15.)
+ *             if identify_data is not None:
  */
     __pyx_t_11 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_reactor); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 106, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_11);
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_11, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 106, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_11, __pyx_n_s_register_callback); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 106, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
-    __pyx_t_11 = NULL;
+    __pyx_t_11 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_get_identify_data); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 106, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_11);
+    __pyx_t_1 = NULL;
     if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
-      __pyx_t_11 = PyMethod_GET_SELF(__pyx_t_2);
-      if (likely(__pyx_t_11)) {
+      __pyx_t_1 = PyMethod_GET_SELF(__pyx_t_2);
+      if (likely(__pyx_t_1)) {
         PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_2);
-        __Pyx_INCREF(__pyx_t_11);
+        __Pyx_INCREF(__pyx_t_1);
         __Pyx_INCREF(function);
         __Pyx_DECREF_SET(__pyx_t_2, function);
       }
     }
-    __pyx_t_9 = (__pyx_t_11) ? __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_11) : __Pyx_PyObject_CallNoArg(__pyx_t_2);
-    __Pyx_XDECREF(__pyx_t_11); __pyx_t_11 = 0;
+    __pyx_t_9 = (__pyx_t_1) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_1, __pyx_t_11) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_11);
+    __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
+    __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
     if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 106, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __Pyx_XDECREF_SET(__pyx_v_start, __pyx_t_9);
+    __Pyx_XDECREF_SET(__pyx_v_completion, __pyx_t_9);
     __pyx_t_9 = 0;
 
     /* "serialhdl.pyx":107
  *             # Obtain and load the data dictionary from the firmware
- *             start = self.reactor.monotonic()
- *             completion = self.reactor.register_callback(self._get_identify_data)             # <<<<<<<<<<<<<<
- *             identify_data = completion.wait(connect_time + 15.)
- *             logging.info(f"Connection took {self.reactor.monotonic() - start} seconds")
- */
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_reactor); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 107, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_11 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_register_callback); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 107, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_11);
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_get_identify_data); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 107, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_1 = NULL;
-    if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_11))) {
-      __pyx_t_1 = PyMethod_GET_SELF(__pyx_t_11);
-      if (likely(__pyx_t_1)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_11);
-        __Pyx_INCREF(__pyx_t_1);
-        __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_11, function);
-      }
-    }
-    __pyx_t_9 = (__pyx_t_1) ? __Pyx_PyObject_Call2Args(__pyx_t_11, __pyx_t_1, __pyx_t_2) : __Pyx_PyObject_CallOneArg(__pyx_t_11, __pyx_t_2);
-    __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 107, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_9);
-    __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
-    __Pyx_XDECREF_SET(__pyx_v_completion, __pyx_t_9);
-    __pyx_t_9 = 0;
-
-    /* "serialhdl.pyx":108
- *             start = self.reactor.monotonic()
  *             completion = self.reactor.register_callback(self._get_identify_data)
  *             identify_data = completion.wait(connect_time + 15.)             # <<<<<<<<<<<<<<
- *             logging.info(f"Connection took {self.reactor.monotonic() - start} seconds")
- *             if identify_data is not None:
- */
-    __pyx_t_11 = __Pyx_PyObject_GetAttrStr(__pyx_v_completion, __pyx_n_s_wait); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 108, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_11);
-    __pyx_t_2 = __Pyx_PyFloat_AddObjC(__pyx_v_connect_time, __pyx_float_15_, 15., 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 108, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_1 = NULL;
-    if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_11))) {
-      __pyx_t_1 = PyMethod_GET_SELF(__pyx_t_11);
-      if (likely(__pyx_t_1)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_11);
-        __Pyx_INCREF(__pyx_t_1);
-        __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_11, function);
-      }
-    }
-    __pyx_t_9 = (__pyx_t_1) ? __Pyx_PyObject_Call2Args(__pyx_t_11, __pyx_t_1, __pyx_t_2) : __Pyx_PyObject_CallOneArg(__pyx_t_11, __pyx_t_2);
-    __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 108, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_9);
-    __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
-    __Pyx_XDECREF_SET(__pyx_v_identify_data, __pyx_t_9);
-    __pyx_t_9 = 0;
-
-    /* "serialhdl.pyx":109
- *             completion = self.reactor.register_callback(self._get_identify_data)
- *             identify_data = completion.wait(connect_time + 15.)
- *             logging.info(f"Connection took {self.reactor.monotonic() - start} seconds")             # <<<<<<<<<<<<<<
  *             if identify_data is not None:
  *                 break
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_11, __pyx_n_s_logging); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 109, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_11);
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_11, __pyx_n_s_info); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 109, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_completion, __pyx_n_s_wait); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 107, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
-    __pyx_t_11 = PyTuple_New(3); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 109, __pyx_L1_error)
+    __pyx_t_11 = __Pyx_PyFloat_AddObjC(__pyx_v_connect_time, __pyx_float_15_, 15., 0, 0); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 107, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_11);
-    __pyx_t_21 = 0;
-    __pyx_t_22 = 127;
-    __Pyx_INCREF(__pyx_kp_u_Connection_took);
-    __pyx_t_21 += 16;
-    __Pyx_GIVEREF(__pyx_kp_u_Connection_took);
-    PyTuple_SET_ITEM(__pyx_t_11, 0, __pyx_kp_u_Connection_took);
-    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_reactor); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 109, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_12 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 109, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_12);
-    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    __pyx_t_3 = NULL;
-    if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_12))) {
-      __pyx_t_3 = PyMethod_GET_SELF(__pyx_t_12);
-      if (likely(__pyx_t_3)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_12);
-        __Pyx_INCREF(__pyx_t_3);
-        __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_12, function);
-      }
-    }
-    __pyx_t_1 = (__pyx_t_3) ? __Pyx_PyObject_CallOneArg(__pyx_t_12, __pyx_t_3) : __Pyx_PyObject_CallNoArg(__pyx_t_12);
-    __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-    if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 109, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_1);
-    __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
-    __pyx_t_12 = PyNumber_Subtract(__pyx_t_1, __pyx_v_start); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 109, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_12);
-    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = __Pyx_PyObject_FormatSimple(__pyx_t_12, __pyx_empty_unicode); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 109, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_1);
-    __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
-    __pyx_t_22 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_1) > __pyx_t_22) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_1) : __pyx_t_22;
-    __pyx_t_21 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_1);
-    __Pyx_GIVEREF(__pyx_t_1);
-    PyTuple_SET_ITEM(__pyx_t_11, 1, __pyx_t_1);
-    __pyx_t_1 = 0;
-    __Pyx_INCREF(__pyx_kp_u_seconds);
-    __pyx_t_21 += 8;
-    __Pyx_GIVEREF(__pyx_kp_u_seconds);
-    PyTuple_SET_ITEM(__pyx_t_11, 2, __pyx_kp_u_seconds);
-    __pyx_t_1 = __Pyx_PyUnicode_Join(__pyx_t_11, 3, __pyx_t_21, __pyx_t_22); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 109, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_1);
-    __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
-    __pyx_t_11 = NULL;
-    if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_2))) {
-      __pyx_t_11 = PyMethod_GET_SELF(__pyx_t_2);
-      if (likely(__pyx_t_11)) {
+    __pyx_t_1 = NULL;
+    if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
+      __pyx_t_1 = PyMethod_GET_SELF(__pyx_t_2);
+      if (likely(__pyx_t_1)) {
         PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_2);
-        __Pyx_INCREF(__pyx_t_11);
+        __Pyx_INCREF(__pyx_t_1);
         __Pyx_INCREF(function);
         __Pyx_DECREF_SET(__pyx_t_2, function);
       }
     }
-    __pyx_t_9 = (__pyx_t_11) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_11, __pyx_t_1) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_1);
-    __Pyx_XDECREF(__pyx_t_11); __pyx_t_11 = 0;
-    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 109, __pyx_L1_error)
+    __pyx_t_9 = (__pyx_t_1) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_1, __pyx_t_11) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_11);
+    __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
+    __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
+    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 107, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+    __Pyx_XDECREF_SET(__pyx_v_identify_data, __pyx_t_9);
+    __pyx_t_9 = 0;
 
-    /* "serialhdl.pyx":110
+    /* "serialhdl.pyx":108
+ *             completion = self.reactor.register_callback(self._get_identify_data)
  *             identify_data = completion.wait(connect_time + 15.)
- *             logging.info(f"Connection took {self.reactor.monotonic() - start} seconds")
  *             if identify_data is not None:             # <<<<<<<<<<<<<<
  *                 break
  *             logging.info("Timeout on serial connect")
  */
     __pyx_t_4 = (__pyx_v_identify_data != Py_None);
-    __pyx_t_23 = (__pyx_t_4 != 0);
-    if (__pyx_t_23) {
+    __pyx_t_21 = (__pyx_t_4 != 0);
+    if (__pyx_t_21) {
 
-      /* "serialhdl.pyx":111
- *             logging.info(f"Connection took {self.reactor.monotonic() - start} seconds")
+      /* "serialhdl.pyx":109
+ *             identify_data = completion.wait(connect_time + 15.)
  *             if identify_data is not None:
  *                 break             # <<<<<<<<<<<<<<
  *             logging.info("Timeout on serial connect")
@@ -4949,370 +4814,54 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_6connect(CYTHON_UNUSED PyObj
  */
       goto __pyx_L4_break;
 
-      /* "serialhdl.pyx":110
+      /* "serialhdl.pyx":108
+ *             completion = self.reactor.register_callback(self._get_identify_data)
  *             identify_data = completion.wait(connect_time + 15.)
- *             logging.info(f"Connection took {self.reactor.monotonic() - start} seconds")
  *             if identify_data is not None:             # <<<<<<<<<<<<<<
  *                 break
  *             logging.info("Timeout on serial connect")
  */
     }
 
-    /* "serialhdl.pyx":112
+    /* "serialhdl.pyx":110
  *             if identify_data is not None:
  *                 break
  *             logging.info("Timeout on serial connect")             # <<<<<<<<<<<<<<
  *             self.disconnect()
  *         msgparser = msgproto.MessageParser()
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_logging); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 112, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_logging); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 110, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_info); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 112, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_1);
+    __pyx_t_11 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_info); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 110, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_11);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __pyx_t_2 = NULL;
-    if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_1))) {
-      __pyx_t_2 = PyMethod_GET_SELF(__pyx_t_1);
+    if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_11))) {
+      __pyx_t_2 = PyMethod_GET_SELF(__pyx_t_11);
       if (likely(__pyx_t_2)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_1);
+        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_11);
         __Pyx_INCREF(__pyx_t_2);
         __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_1, function);
+        __Pyx_DECREF_SET(__pyx_t_11, function);
       }
     }
-    __pyx_t_9 = (__pyx_t_2) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_2, __pyx_kp_u_Timeout_on_serial_connect) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_kp_u_Timeout_on_serial_connect);
+    __pyx_t_9 = (__pyx_t_2) ? __Pyx_PyObject_Call2Args(__pyx_t_11, __pyx_t_2, __pyx_kp_u_Timeout_on_serial_connect) : __Pyx_PyObject_CallOneArg(__pyx_t_11, __pyx_kp_u_Timeout_on_serial_connect);
     __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 112, __pyx_L1_error)
+    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 110, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
-    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+    __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-    /* "serialhdl.pyx":113
+    /* "serialhdl.pyx":111
  *                 break
  *             logging.info("Timeout on serial connect")
  *             self.disconnect()             # <<<<<<<<<<<<<<
  *         msgparser = msgproto.MessageParser()
  *         msgparser.process_identify(identify_data)
  */
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_disconnect); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 113, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_2 = NULL;
-    if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_1))) {
-      __pyx_t_2 = PyMethod_GET_SELF(__pyx_t_1);
-      if (likely(__pyx_t_2)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_1);
-        __Pyx_INCREF(__pyx_t_2);
-        __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_1, function);
-      }
-    }
-    __pyx_t_9 = (__pyx_t_2) ? __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_2) : __Pyx_PyObject_CallNoArg(__pyx_t_1);
-    __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 113, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_9);
-    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-    __pyx_L3_continue:;
-  }
-  __pyx_L4_break:;
-
-  /* "serialhdl.pyx":114
- *             logging.info("Timeout on serial connect")
- *             self.disconnect()
- *         msgparser = msgproto.MessageParser()             # <<<<<<<<<<<<<<
- *         msgparser.process_identify(identify_data)
- *         self.msgparser = msgparser
- */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_msgproto); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 114, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_MessageParser); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 114, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_2);
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = NULL;
-  if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_2))) {
-    __pyx_t_1 = PyMethod_GET_SELF(__pyx_t_2);
-    if (likely(__pyx_t_1)) {
-      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_2);
-      __Pyx_INCREF(__pyx_t_1);
-      __Pyx_INCREF(function);
-      __Pyx_DECREF_SET(__pyx_t_2, function);
-    }
-  }
-  __pyx_t_9 = (__pyx_t_1) ? __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_1) : __Pyx_PyObject_CallNoArg(__pyx_t_2);
-  __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
-  if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 114, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_9);
-  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_v_msgparser = __pyx_t_9;
-  __pyx_t_9 = 0;
-
-  /* "serialhdl.pyx":115
- *             self.disconnect()
- *         msgparser = msgproto.MessageParser()
- *         msgparser.process_identify(identify_data)             # <<<<<<<<<<<<<<
- *         self.msgparser = msgparser
- *         self.register_response(self.handle_unknown, '#unknown')
- */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_msgparser, __pyx_n_s_process_identify); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 115, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_2);
-  if (unlikely(!__pyx_v_identify_data)) { __Pyx_RaiseUnboundLocalError("identify_data"); __PYX_ERR(0, 115, __pyx_L1_error) }
-  __pyx_t_1 = NULL;
-  if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
-    __pyx_t_1 = PyMethod_GET_SELF(__pyx_t_2);
-    if (likely(__pyx_t_1)) {
-      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_2);
-      __Pyx_INCREF(__pyx_t_1);
-      __Pyx_INCREF(function);
-      __Pyx_DECREF_SET(__pyx_t_2, function);
-    }
-  }
-  __pyx_t_9 = (__pyx_t_1) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_1, __pyx_v_identify_data) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_v_identify_data);
-  __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
-  if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 115, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_9);
-  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-
-  /* "serialhdl.pyx":116
- *         msgparser = msgproto.MessageParser()
- *         msgparser.process_identify(identify_data)
- *         self.msgparser = msgparser             # <<<<<<<<<<<<<<
- *         self.register_response(self.handle_unknown, '#unknown')
- *         # Setup baud adjust
- */
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_msgparser, __pyx_v_msgparser) < 0) __PYX_ERR(0, 116, __pyx_L1_error)
-
-  /* "serialhdl.pyx":117
- *         msgparser.process_identify(identify_data)
- *         self.msgparser = msgparser
- *         self.register_response(self.handle_unknown, '#unknown')             # <<<<<<<<<<<<<<
- *         # Setup baud adjust
- *         mcu_baud = msgparser.get_constant_float('SERIAL_BAUD', None)
- */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_register_response); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 117, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_handle_unknown); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 117, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_11 = NULL;
-  __pyx_t_13 = 0;
-  if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
-    __pyx_t_11 = PyMethod_GET_SELF(__pyx_t_2);
-    if (likely(__pyx_t_11)) {
-      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_2);
-      __Pyx_INCREF(__pyx_t_11);
-      __Pyx_INCREF(function);
-      __Pyx_DECREF_SET(__pyx_t_2, function);
-      __pyx_t_13 = 1;
-    }
-  }
-  #if CYTHON_FAST_PYCALL
-  if (PyFunction_Check(__pyx_t_2)) {
-    PyObject *__pyx_temp[3] = {__pyx_t_11, __pyx_t_1, __pyx_kp_u_unknown};
-    __pyx_t_9 = __Pyx_PyFunction_FastCall(__pyx_t_2, __pyx_temp+1-__pyx_t_13, 2+__pyx_t_13); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 117, __pyx_L1_error)
-    __Pyx_XDECREF(__pyx_t_11); __pyx_t_11 = 0;
-    __Pyx_GOTREF(__pyx_t_9);
-    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  } else
-  #endif
-  #if CYTHON_FAST_PYCCALL
-  if (__Pyx_PyFastCFunction_Check(__pyx_t_2)) {
-    PyObject *__pyx_temp[3] = {__pyx_t_11, __pyx_t_1, __pyx_kp_u_unknown};
-    __pyx_t_9 = __Pyx_PyCFunction_FastCall(__pyx_t_2, __pyx_temp+1-__pyx_t_13, 2+__pyx_t_13); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 117, __pyx_L1_error)
-    __Pyx_XDECREF(__pyx_t_11); __pyx_t_11 = 0;
-    __Pyx_GOTREF(__pyx_t_9);
-    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  } else
-  #endif
-  {
-    __pyx_t_12 = PyTuple_New(2+__pyx_t_13); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 117, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_12);
-    if (__pyx_t_11) {
-      __Pyx_GIVEREF(__pyx_t_11); PyTuple_SET_ITEM(__pyx_t_12, 0, __pyx_t_11); __pyx_t_11 = NULL;
-    }
-    __Pyx_GIVEREF(__pyx_t_1);
-    PyTuple_SET_ITEM(__pyx_t_12, 0+__pyx_t_13, __pyx_t_1);
-    __Pyx_INCREF(__pyx_kp_u_unknown);
-    __Pyx_GIVEREF(__pyx_kp_u_unknown);
-    PyTuple_SET_ITEM(__pyx_t_12, 1+__pyx_t_13, __pyx_kp_u_unknown);
-    __pyx_t_1 = 0;
-    __pyx_t_9 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_12, NULL); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 117, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_9);
-    __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
-  }
-  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-
-  /* "serialhdl.pyx":119
- *         self.register_response(self.handle_unknown, '#unknown')
- *         # Setup baud adjust
- *         mcu_baud = msgparser.get_constant_float('SERIAL_BAUD', None)             # <<<<<<<<<<<<<<
- *         if mcu_baud is not None:
- *             baud_adjust = self.BITS_PER_BYTE / mcu_baud
- */
-  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_msgparser, __pyx_n_s_get_constant_float); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 119, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_9);
-  __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_9, __pyx_tuple__3, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 119, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_2);
-  __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-  __pyx_v_mcu_baud = __pyx_t_2;
-  __pyx_t_2 = 0;
-
-  /* "serialhdl.pyx":120
- *         # Setup baud adjust
- *         mcu_baud = msgparser.get_constant_float('SERIAL_BAUD', None)
- *         if mcu_baud is not None:             # <<<<<<<<<<<<<<
- *             baud_adjust = self.BITS_PER_BYTE / mcu_baud
- *             self.ffi_lib.serialqueue_set_baud_adjust(
- */
-  __pyx_t_23 = (__pyx_v_mcu_baud != Py_None);
-  __pyx_t_4 = (__pyx_t_23 != 0);
-  if (__pyx_t_4) {
-
-    /* "serialhdl.pyx":121
- *         mcu_baud = msgparser.get_constant_float('SERIAL_BAUD', None)
- *         if mcu_baud is not None:
- *             baud_adjust = self.BITS_PER_BYTE / mcu_baud             # <<<<<<<<<<<<<<
- *             self.ffi_lib.serialqueue_set_baud_adjust(
- *                 self.serialqueue, baud_adjust)
- */
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_BITS_PER_BYTE); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 121, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_9 = __Pyx_PyNumber_Divide(__pyx_t_2, __pyx_v_mcu_baud); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 121, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_9);
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_v_baud_adjust = __pyx_t_9;
-    __pyx_t_9 = 0;
-
-    /* "serialhdl.pyx":122
- *         if mcu_baud is not None:
- *             baud_adjust = self.BITS_PER_BYTE / mcu_baud
- *             self.ffi_lib.serialqueue_set_baud_adjust(             # <<<<<<<<<<<<<<
- *                 self.serialqueue, baud_adjust)
- *         receive_window = msgparser.get_constant_int('RECEIVE_WINDOW', None)
- */
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 122, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_12 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_serialqueue_set_baud_adjust); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 122, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_12);
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-
-    /* "serialhdl.pyx":123
- *             baud_adjust = self.BITS_PER_BYTE / mcu_baud
- *             self.ffi_lib.serialqueue_set_baud_adjust(
- *                 self.serialqueue, baud_adjust)             # <<<<<<<<<<<<<<
- *         receive_window = msgparser.get_constant_int('RECEIVE_WINDOW', None)
- *         if receive_window is not None:
- */
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 123, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_1 = NULL;
-    __pyx_t_13 = 0;
-    if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_12))) {
-      __pyx_t_1 = PyMethod_GET_SELF(__pyx_t_12);
-      if (likely(__pyx_t_1)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_12);
-        __Pyx_INCREF(__pyx_t_1);
-        __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_12, function);
-        __pyx_t_13 = 1;
-      }
-    }
-    #if CYTHON_FAST_PYCALL
-    if (PyFunction_Check(__pyx_t_12)) {
-      PyObject *__pyx_temp[3] = {__pyx_t_1, __pyx_t_2, __pyx_v_baud_adjust};
-      __pyx_t_9 = __Pyx_PyFunction_FastCall(__pyx_t_12, __pyx_temp+1-__pyx_t_13, 2+__pyx_t_13); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 122, __pyx_L1_error)
-      __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
-      __Pyx_GOTREF(__pyx_t_9);
-      __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    } else
-    #endif
-    #if CYTHON_FAST_PYCCALL
-    if (__Pyx_PyFastCFunction_Check(__pyx_t_12)) {
-      PyObject *__pyx_temp[3] = {__pyx_t_1, __pyx_t_2, __pyx_v_baud_adjust};
-      __pyx_t_9 = __Pyx_PyCFunction_FastCall(__pyx_t_12, __pyx_temp+1-__pyx_t_13, 2+__pyx_t_13); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 122, __pyx_L1_error)
-      __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
-      __Pyx_GOTREF(__pyx_t_9);
-      __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    } else
-    #endif
-    {
-      __pyx_t_11 = PyTuple_New(2+__pyx_t_13); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 122, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_11);
-      if (__pyx_t_1) {
-        __Pyx_GIVEREF(__pyx_t_1); PyTuple_SET_ITEM(__pyx_t_11, 0, __pyx_t_1); __pyx_t_1 = NULL;
-      }
-      __Pyx_GIVEREF(__pyx_t_2);
-      PyTuple_SET_ITEM(__pyx_t_11, 0+__pyx_t_13, __pyx_t_2);
-      __Pyx_INCREF(__pyx_v_baud_adjust);
-      __Pyx_GIVEREF(__pyx_v_baud_adjust);
-      PyTuple_SET_ITEM(__pyx_t_11, 1+__pyx_t_13, __pyx_v_baud_adjust);
-      __pyx_t_2 = 0;
-      __pyx_t_9 = __Pyx_PyObject_Call(__pyx_t_12, __pyx_t_11, NULL); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 122, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_9);
-      __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
-    }
-    __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
-    __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-
-    /* "serialhdl.pyx":120
- *         # Setup baud adjust
- *         mcu_baud = msgparser.get_constant_float('SERIAL_BAUD', None)
- *         if mcu_baud is not None:             # <<<<<<<<<<<<<<
- *             baud_adjust = self.BITS_PER_BYTE / mcu_baud
- *             self.ffi_lib.serialqueue_set_baud_adjust(
- */
-  }
-
-  /* "serialhdl.pyx":124
- *             self.ffi_lib.serialqueue_set_baud_adjust(
- *                 self.serialqueue, baud_adjust)
- *         receive_window = msgparser.get_constant_int('RECEIVE_WINDOW', None)             # <<<<<<<<<<<<<<
- *         if receive_window is not None:
- *             self.ffi_lib.serialqueue_set_receive_window(
- */
-  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_msgparser, __pyx_n_s_get_constant_int); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 124, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_9);
-  __pyx_t_12 = __Pyx_PyObject_Call(__pyx_t_9, __pyx_tuple__4, NULL); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 124, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_12);
-  __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-  __pyx_v_receive_window = __pyx_t_12;
-  __pyx_t_12 = 0;
-
-  /* "serialhdl.pyx":125
- *                 self.serialqueue, baud_adjust)
- *         receive_window = msgparser.get_constant_int('RECEIVE_WINDOW', None)
- *         if receive_window is not None:             # <<<<<<<<<<<<<<
- *             self.ffi_lib.serialqueue_set_receive_window(
- *                 self.serialqueue, receive_window)
- */
-  __pyx_t_4 = (__pyx_v_receive_window != Py_None);
-  __pyx_t_23 = (__pyx_t_4 != 0);
-  if (__pyx_t_23) {
-
-    /* "serialhdl.pyx":126
- *         receive_window = msgparser.get_constant_int('RECEIVE_WINDOW', None)
- *         if receive_window is not None:
- *             self.ffi_lib.serialqueue_set_receive_window(             # <<<<<<<<<<<<<<
- *                 self.serialqueue, receive_window)
- *     def connect_file(self, debugoutput, dictionary, pace=False):
- */
-    __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 126, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_9);
-    __pyx_t_11 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_serialqueue_set_receive_window); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 126, __pyx_L1_error)
+    __pyx_t_11 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_disconnect); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 111, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_11);
-    __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-
-    /* "serialhdl.pyx":127
- *         if receive_window is not None:
- *             self.ffi_lib.serialqueue_set_receive_window(
- *                 self.serialqueue, receive_window)             # <<<<<<<<<<<<<<
- *     def connect_file(self, debugoutput, dictionary, pace=False):
- *         self.ser = debugoutput
- */
-    __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 127, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_9);
     __pyx_t_2 = NULL;
-    __pyx_t_13 = 0;
     if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_11))) {
       __pyx_t_2 = PyMethod_GET_SELF(__pyx_t_11);
       if (likely(__pyx_t_2)) {
@@ -5320,47 +4869,363 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_6connect(CYTHON_UNUSED PyObj
         __Pyx_INCREF(__pyx_t_2);
         __Pyx_INCREF(function);
         __Pyx_DECREF_SET(__pyx_t_11, function);
+      }
+    }
+    __pyx_t_9 = (__pyx_t_2) ? __Pyx_PyObject_CallOneArg(__pyx_t_11, __pyx_t_2) : __Pyx_PyObject_CallNoArg(__pyx_t_11);
+    __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
+    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 111, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_9);
+    __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
+    __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+    __pyx_L3_continue:;
+  }
+  __pyx_L4_break:;
+
+  /* "serialhdl.pyx":112
+ *             logging.info("Timeout on serial connect")
+ *             self.disconnect()
+ *         msgparser = msgproto.MessageParser()             # <<<<<<<<<<<<<<
+ *         msgparser.process_identify(identify_data)
+ *         self.msgparser = msgparser
+ */
+  __Pyx_GetModuleGlobalName(__pyx_t_11, __pyx_n_s_msgproto); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 112, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_11);
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_11, __pyx_n_s_MessageParser); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 112, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
+  __pyx_t_11 = NULL;
+  if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_2))) {
+    __pyx_t_11 = PyMethod_GET_SELF(__pyx_t_2);
+    if (likely(__pyx_t_11)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_2);
+      __Pyx_INCREF(__pyx_t_11);
+      __Pyx_INCREF(function);
+      __Pyx_DECREF_SET(__pyx_t_2, function);
+    }
+  }
+  __pyx_t_9 = (__pyx_t_11) ? __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_11) : __Pyx_PyObject_CallNoArg(__pyx_t_2);
+  __Pyx_XDECREF(__pyx_t_11); __pyx_t_11 = 0;
+  if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 112, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_9);
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __pyx_v_msgparser = __pyx_t_9;
+  __pyx_t_9 = 0;
+
+  /* "serialhdl.pyx":113
+ *             self.disconnect()
+ *         msgparser = msgproto.MessageParser()
+ *         msgparser.process_identify(identify_data)             # <<<<<<<<<<<<<<
+ *         self.msgparser = msgparser
+ *         self.register_response(self.handle_unknown, '#unknown')
+ */
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_msgparser, __pyx_n_s_process_identify); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 113, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (unlikely(!__pyx_v_identify_data)) { __Pyx_RaiseUnboundLocalError("identify_data"); __PYX_ERR(0, 113, __pyx_L1_error) }
+  __pyx_t_11 = NULL;
+  if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
+    __pyx_t_11 = PyMethod_GET_SELF(__pyx_t_2);
+    if (likely(__pyx_t_11)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_2);
+      __Pyx_INCREF(__pyx_t_11);
+      __Pyx_INCREF(function);
+      __Pyx_DECREF_SET(__pyx_t_2, function);
+    }
+  }
+  __pyx_t_9 = (__pyx_t_11) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_11, __pyx_v_identify_data) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_v_identify_data);
+  __Pyx_XDECREF(__pyx_t_11); __pyx_t_11 = 0;
+  if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 113, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_9);
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+
+  /* "serialhdl.pyx":114
+ *         msgparser = msgproto.MessageParser()
+ *         msgparser.process_identify(identify_data)
+ *         self.msgparser = msgparser             # <<<<<<<<<<<<<<
+ *         self.register_response(self.handle_unknown, '#unknown')
+ *         # Setup baud adjust
+ */
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_msgparser, __pyx_v_msgparser) < 0) __PYX_ERR(0, 114, __pyx_L1_error)
+
+  /* "serialhdl.pyx":115
+ *         msgparser.process_identify(identify_data)
+ *         self.msgparser = msgparser
+ *         self.register_response(self.handle_unknown, '#unknown')             # <<<<<<<<<<<<<<
+ *         # Setup baud adjust
+ *         mcu_baud = msgparser.get_constant_float('SERIAL_BAUD', None)
+ */
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_register_response); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 115, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_t_11 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_handle_unknown); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 115, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_11);
+  __pyx_t_1 = NULL;
+  __pyx_t_13 = 0;
+  if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
+    __pyx_t_1 = PyMethod_GET_SELF(__pyx_t_2);
+    if (likely(__pyx_t_1)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_2);
+      __Pyx_INCREF(__pyx_t_1);
+      __Pyx_INCREF(function);
+      __Pyx_DECREF_SET(__pyx_t_2, function);
+      __pyx_t_13 = 1;
+    }
+  }
+  #if CYTHON_FAST_PYCALL
+  if (PyFunction_Check(__pyx_t_2)) {
+    PyObject *__pyx_temp[3] = {__pyx_t_1, __pyx_t_11, __pyx_kp_u_unknown};
+    __pyx_t_9 = __Pyx_PyFunction_FastCall(__pyx_t_2, __pyx_temp+1-__pyx_t_13, 2+__pyx_t_13); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 115, __pyx_L1_error)
+    __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
+    __Pyx_GOTREF(__pyx_t_9);
+    __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
+  } else
+  #endif
+  #if CYTHON_FAST_PYCCALL
+  if (__Pyx_PyFastCFunction_Check(__pyx_t_2)) {
+    PyObject *__pyx_temp[3] = {__pyx_t_1, __pyx_t_11, __pyx_kp_u_unknown};
+    __pyx_t_9 = __Pyx_PyCFunction_FastCall(__pyx_t_2, __pyx_temp+1-__pyx_t_13, 2+__pyx_t_13); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 115, __pyx_L1_error)
+    __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
+    __Pyx_GOTREF(__pyx_t_9);
+    __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
+  } else
+  #endif
+  {
+    __pyx_t_3 = PyTuple_New(2+__pyx_t_13); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 115, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_3);
+    if (__pyx_t_1) {
+      __Pyx_GIVEREF(__pyx_t_1); PyTuple_SET_ITEM(__pyx_t_3, 0, __pyx_t_1); __pyx_t_1 = NULL;
+    }
+    __Pyx_GIVEREF(__pyx_t_11);
+    PyTuple_SET_ITEM(__pyx_t_3, 0+__pyx_t_13, __pyx_t_11);
+    __Pyx_INCREF(__pyx_kp_u_unknown);
+    __Pyx_GIVEREF(__pyx_kp_u_unknown);
+    PyTuple_SET_ITEM(__pyx_t_3, 1+__pyx_t_13, __pyx_kp_u_unknown);
+    __pyx_t_11 = 0;
+    __pyx_t_9 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_3, NULL); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 115, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_9);
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  }
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+
+  /* "serialhdl.pyx":117
+ *         self.register_response(self.handle_unknown, '#unknown')
+ *         # Setup baud adjust
+ *         mcu_baud = msgparser.get_constant_float('SERIAL_BAUD', None)             # <<<<<<<<<<<<<<
+ *         if mcu_baud is not None:
+ *             baud_adjust = self.BITS_PER_BYTE / mcu_baud
+ */
+  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_msgparser, __pyx_n_s_get_constant_float); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 117, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_9);
+  __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_9, __pyx_tuple__3, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 117, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+  __pyx_v_mcu_baud = __pyx_t_2;
+  __pyx_t_2 = 0;
+
+  /* "serialhdl.pyx":118
+ *         # Setup baud adjust
+ *         mcu_baud = msgparser.get_constant_float('SERIAL_BAUD', None)
+ *         if mcu_baud is not None:             # <<<<<<<<<<<<<<
+ *             baud_adjust = self.BITS_PER_BYTE / mcu_baud
+ *             self.ffi_lib.serialqueue_set_baud_adjust(
+ */
+  __pyx_t_21 = (__pyx_v_mcu_baud != Py_None);
+  __pyx_t_4 = (__pyx_t_21 != 0);
+  if (__pyx_t_4) {
+
+    /* "serialhdl.pyx":119
+ *         mcu_baud = msgparser.get_constant_float('SERIAL_BAUD', None)
+ *         if mcu_baud is not None:
+ *             baud_adjust = self.BITS_PER_BYTE / mcu_baud             # <<<<<<<<<<<<<<
+ *             self.ffi_lib.serialqueue_set_baud_adjust(
+ *                 self.serialqueue, baud_adjust)
+ */
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_BITS_PER_BYTE); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 119, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __pyx_t_9 = __Pyx_PyNumber_Divide(__pyx_t_2, __pyx_v_mcu_baud); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 119, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_9);
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+    __pyx_v_baud_adjust = __pyx_t_9;
+    __pyx_t_9 = 0;
+
+    /* "serialhdl.pyx":120
+ *         if mcu_baud is not None:
+ *             baud_adjust = self.BITS_PER_BYTE / mcu_baud
+ *             self.ffi_lib.serialqueue_set_baud_adjust(             # <<<<<<<<<<<<<<
+ *                 self.serialqueue, baud_adjust)
+ *         receive_window = msgparser.get_constant_int('RECEIVE_WINDOW', None)
+ */
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 120, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_serialqueue_set_baud_adjust); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 120, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_3);
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+
+    /* "serialhdl.pyx":121
+ *             baud_adjust = self.BITS_PER_BYTE / mcu_baud
+ *             self.ffi_lib.serialqueue_set_baud_adjust(
+ *                 self.serialqueue, baud_adjust)             # <<<<<<<<<<<<<<
+ *         receive_window = msgparser.get_constant_int('RECEIVE_WINDOW', None)
+ *         if receive_window is not None:
+ */
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 121, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __pyx_t_11 = NULL;
+    __pyx_t_13 = 0;
+    if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_3))) {
+      __pyx_t_11 = PyMethod_GET_SELF(__pyx_t_3);
+      if (likely(__pyx_t_11)) {
+        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_3);
+        __Pyx_INCREF(__pyx_t_11);
+        __Pyx_INCREF(function);
+        __Pyx_DECREF_SET(__pyx_t_3, function);
         __pyx_t_13 = 1;
       }
     }
     #if CYTHON_FAST_PYCALL
-    if (PyFunction_Check(__pyx_t_11)) {
+    if (PyFunction_Check(__pyx_t_3)) {
+      PyObject *__pyx_temp[3] = {__pyx_t_11, __pyx_t_2, __pyx_v_baud_adjust};
+      __pyx_t_9 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_13, 2+__pyx_t_13); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 120, __pyx_L1_error)
+      __Pyx_XDECREF(__pyx_t_11); __pyx_t_11 = 0;
+      __Pyx_GOTREF(__pyx_t_9);
+      __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+    } else
+    #endif
+    #if CYTHON_FAST_PYCCALL
+    if (__Pyx_PyFastCFunction_Check(__pyx_t_3)) {
+      PyObject *__pyx_temp[3] = {__pyx_t_11, __pyx_t_2, __pyx_v_baud_adjust};
+      __pyx_t_9 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_13, 2+__pyx_t_13); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 120, __pyx_L1_error)
+      __Pyx_XDECREF(__pyx_t_11); __pyx_t_11 = 0;
+      __Pyx_GOTREF(__pyx_t_9);
+      __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+    } else
+    #endif
+    {
+      __pyx_t_1 = PyTuple_New(2+__pyx_t_13); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 120, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_1);
+      if (__pyx_t_11) {
+        __Pyx_GIVEREF(__pyx_t_11); PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_t_11); __pyx_t_11 = NULL;
+      }
+      __Pyx_GIVEREF(__pyx_t_2);
+      PyTuple_SET_ITEM(__pyx_t_1, 0+__pyx_t_13, __pyx_t_2);
+      __Pyx_INCREF(__pyx_v_baud_adjust);
+      __Pyx_GIVEREF(__pyx_v_baud_adjust);
+      PyTuple_SET_ITEM(__pyx_t_1, 1+__pyx_t_13, __pyx_v_baud_adjust);
+      __pyx_t_2 = 0;
+      __pyx_t_9 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_1, NULL); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 120, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_9);
+      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+    }
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+    __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+
+    /* "serialhdl.pyx":118
+ *         # Setup baud adjust
+ *         mcu_baud = msgparser.get_constant_float('SERIAL_BAUD', None)
+ *         if mcu_baud is not None:             # <<<<<<<<<<<<<<
+ *             baud_adjust = self.BITS_PER_BYTE / mcu_baud
+ *             self.ffi_lib.serialqueue_set_baud_adjust(
+ */
+  }
+
+  /* "serialhdl.pyx":122
+ *             self.ffi_lib.serialqueue_set_baud_adjust(
+ *                 self.serialqueue, baud_adjust)
+ *         receive_window = msgparser.get_constant_int('RECEIVE_WINDOW', None)             # <<<<<<<<<<<<<<
+ *         if receive_window is not None:
+ *             self.ffi_lib.serialqueue_set_receive_window(
+ */
+  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_msgparser, __pyx_n_s_get_constant_int); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 122, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_9);
+  __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_9, __pyx_tuple__4, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 122, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_3);
+  __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+  __pyx_v_receive_window = __pyx_t_3;
+  __pyx_t_3 = 0;
+
+  /* "serialhdl.pyx":123
+ *                 self.serialqueue, baud_adjust)
+ *         receive_window = msgparser.get_constant_int('RECEIVE_WINDOW', None)
+ *         if receive_window is not None:             # <<<<<<<<<<<<<<
+ *             self.ffi_lib.serialqueue_set_receive_window(
+ *                 self.serialqueue, receive_window)
+ */
+  __pyx_t_4 = (__pyx_v_receive_window != Py_None);
+  __pyx_t_21 = (__pyx_t_4 != 0);
+  if (__pyx_t_21) {
+
+    /* "serialhdl.pyx":124
+ *         receive_window = msgparser.get_constant_int('RECEIVE_WINDOW', None)
+ *         if receive_window is not None:
+ *             self.ffi_lib.serialqueue_set_receive_window(             # <<<<<<<<<<<<<<
+ *                 self.serialqueue, receive_window)
+ *     def connect_file(self, debugoutput, dictionary, pace=False):
+ */
+    __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 124, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_9);
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_serialqueue_set_receive_window); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 124, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_1);
+    __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+
+    /* "serialhdl.pyx":125
+ *         if receive_window is not None:
+ *             self.ffi_lib.serialqueue_set_receive_window(
+ *                 self.serialqueue, receive_window)             # <<<<<<<<<<<<<<
+ *     def connect_file(self, debugoutput, dictionary, pace=False):
+ *         self.ser = debugoutput
+ */
+    __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 125, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_9);
+    __pyx_t_2 = NULL;
+    __pyx_t_13 = 0;
+    if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_1))) {
+      __pyx_t_2 = PyMethod_GET_SELF(__pyx_t_1);
+      if (likely(__pyx_t_2)) {
+        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_1);
+        __Pyx_INCREF(__pyx_t_2);
+        __Pyx_INCREF(function);
+        __Pyx_DECREF_SET(__pyx_t_1, function);
+        __pyx_t_13 = 1;
+      }
+    }
+    #if CYTHON_FAST_PYCALL
+    if (PyFunction_Check(__pyx_t_1)) {
       PyObject *__pyx_temp[3] = {__pyx_t_2, __pyx_t_9, __pyx_v_receive_window};
-      __pyx_t_12 = __Pyx_PyFunction_FastCall(__pyx_t_11, __pyx_temp+1-__pyx_t_13, 2+__pyx_t_13); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 126, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_PyFunction_FastCall(__pyx_t_1, __pyx_temp+1-__pyx_t_13, 2+__pyx_t_13); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 124, __pyx_L1_error)
       __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-      __Pyx_GOTREF(__pyx_t_12);
+      __Pyx_GOTREF(__pyx_t_3);
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
     } else
     #endif
     #if CYTHON_FAST_PYCCALL
-    if (__Pyx_PyFastCFunction_Check(__pyx_t_11)) {
+    if (__Pyx_PyFastCFunction_Check(__pyx_t_1)) {
       PyObject *__pyx_temp[3] = {__pyx_t_2, __pyx_t_9, __pyx_v_receive_window};
-      __pyx_t_12 = __Pyx_PyCFunction_FastCall(__pyx_t_11, __pyx_temp+1-__pyx_t_13, 2+__pyx_t_13); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 126, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_PyCFunction_FastCall(__pyx_t_1, __pyx_temp+1-__pyx_t_13, 2+__pyx_t_13); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 124, __pyx_L1_error)
       __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-      __Pyx_GOTREF(__pyx_t_12);
+      __Pyx_GOTREF(__pyx_t_3);
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
     } else
     #endif
     {
-      __pyx_t_1 = PyTuple_New(2+__pyx_t_13); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 126, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_1);
+      __pyx_t_11 = PyTuple_New(2+__pyx_t_13); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 124, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_11);
       if (__pyx_t_2) {
-        __Pyx_GIVEREF(__pyx_t_2); PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_t_2); __pyx_t_2 = NULL;
+        __Pyx_GIVEREF(__pyx_t_2); PyTuple_SET_ITEM(__pyx_t_11, 0, __pyx_t_2); __pyx_t_2 = NULL;
       }
       __Pyx_GIVEREF(__pyx_t_9);
-      PyTuple_SET_ITEM(__pyx_t_1, 0+__pyx_t_13, __pyx_t_9);
+      PyTuple_SET_ITEM(__pyx_t_11, 0+__pyx_t_13, __pyx_t_9);
       __Pyx_INCREF(__pyx_v_receive_window);
       __Pyx_GIVEREF(__pyx_v_receive_window);
-      PyTuple_SET_ITEM(__pyx_t_1, 1+__pyx_t_13, __pyx_v_receive_window);
+      PyTuple_SET_ITEM(__pyx_t_11, 1+__pyx_t_13, __pyx_v_receive_window);
       __pyx_t_9 = 0;
-      __pyx_t_12 = __Pyx_PyObject_Call(__pyx_t_11, __pyx_t_1, NULL); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 126, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_12);
-      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+      __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_11, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 124, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_3);
+      __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
     }
-    __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
-    __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
+    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-    /* "serialhdl.pyx":125
+    /* "serialhdl.pyx":123
  *                 self.serialqueue, baud_adjust)
  *         receive_window = msgparser.get_constant_int('RECEIVE_WINDOW', None)
  *         if receive_window is not None:             # <<<<<<<<<<<<<<
@@ -5394,7 +5259,6 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_6connect(CYTHON_UNUSED PyObj
   __Pyx_XDECREF(__pyx_v_start_time);
   __Pyx_XDECREF(__pyx_v_connect_time);
   __Pyx_XDECREF(__pyx_v_e);
-  __Pyx_XDECREF(__pyx_v_start);
   __Pyx_XDECREF(__pyx_v_completion);
   __Pyx_XDECREF(__pyx_v_identify_data);
   __Pyx_XDECREF(__pyx_v_msgparser);
@@ -5406,7 +5270,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_6connect(CYTHON_UNUSED PyObj
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":128
+/* "serialhdl.pyx":126
  *             self.ffi_lib.serialqueue_set_receive_window(
  *                 self.serialqueue, receive_window)
  *     def connect_file(self, debugoutput, dictionary, pace=False):             # <<<<<<<<<<<<<<
@@ -5453,13 +5317,13 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_9connect_file(PyObject *__py
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_debugoutput)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("connect_file", 0, 3, 4, 1); __PYX_ERR(0, 128, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("connect_file", 0, 3, 4, 1); __PYX_ERR(0, 126, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_dictionary)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("connect_file", 0, 3, 4, 2); __PYX_ERR(0, 128, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("connect_file", 0, 3, 4, 2); __PYX_ERR(0, 126, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  3:
@@ -5469,7 +5333,7 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_9connect_file(PyObject *__py
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "connect_file") < 0)) __PYX_ERR(0, 128, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "connect_file") < 0)) __PYX_ERR(0, 126, __pyx_L3_error)
       }
     } else {
       switch (PyTuple_GET_SIZE(__pyx_args)) {
@@ -5489,7 +5353,7 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_9connect_file(PyObject *__py
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("connect_file", 0, 3, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 128, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("connect_file", 0, 3, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 126, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("serialhdl.SerialReader.connect_file", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -5513,57 +5377,57 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_8connect_file(CYTHON_UNUSED 
   int __pyx_t_6;
   __Pyx_RefNannySetupContext("connect_file", 0);
 
-  /* "serialhdl.pyx":129
+  /* "serialhdl.pyx":127
  *                 self.serialqueue, receive_window)
  *     def connect_file(self, debugoutput, dictionary, pace=False):
  *         self.ser = debugoutput             # <<<<<<<<<<<<<<
  *         self.msgparser.process_identify(dictionary, decompress=False)
  *         self.serialqueue = self.ffi_lib.serialqueue_alloc(self.ser.fileno(), 1)
  */
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_ser, __pyx_v_debugoutput) < 0) __PYX_ERR(0, 129, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_ser, __pyx_v_debugoutput) < 0) __PYX_ERR(0, 127, __pyx_L1_error)
 
-  /* "serialhdl.pyx":130
+  /* "serialhdl.pyx":128
  *     def connect_file(self, debugoutput, dictionary, pace=False):
  *         self.ser = debugoutput
  *         self.msgparser.process_identify(dictionary, decompress=False)             # <<<<<<<<<<<<<<
  *         self.serialqueue = self.ffi_lib.serialqueue_alloc(self.ser.fileno(), 1)
  *     def set_clock_est(self, freq, last_time, last_clock):
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_msgparser); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 130, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_msgparser); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 128, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_process_identify); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 130, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_process_identify); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 128, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = PyTuple_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 130, __pyx_L1_error)
+  __pyx_t_1 = PyTuple_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 128, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_INCREF(__pyx_v_dictionary);
   __Pyx_GIVEREF(__pyx_v_dictionary);
   PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_v_dictionary);
-  __pyx_t_3 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 130, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 128, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  if (PyDict_SetItem(__pyx_t_3, __pyx_n_s_decompress, Py_False) < 0) __PYX_ERR(0, 130, __pyx_L1_error)
-  __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_1, __pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 130, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_3, __pyx_n_s_decompress, Py_False) < 0) __PYX_ERR(0, 128, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_1, __pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 128, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-  /* "serialhdl.pyx":131
+  /* "serialhdl.pyx":129
  *         self.ser = debugoutput
  *         self.msgparser.process_identify(dictionary, decompress=False)
  *         self.serialqueue = self.ffi_lib.serialqueue_alloc(self.ser.fileno(), 1)             # <<<<<<<<<<<<<<
  *     def set_clock_est(self, freq, last_time, last_clock):
  *         self.ffi_lib.serialqueue_set_clock_est(
  */
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 131, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 129, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_serialqueue_alloc); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 131, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_serialqueue_alloc); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 129, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ser); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 131, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ser); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 129, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_fileno); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 131, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_fileno); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 129, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_2 = NULL;
@@ -5578,7 +5442,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_8connect_file(CYTHON_UNUSED 
   }
   __pyx_t_3 = (__pyx_t_2) ? __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_t_2) : __Pyx_PyObject_CallNoArg(__pyx_t_5);
   __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 131, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 129, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __pyx_t_5 = NULL;
@@ -5596,7 +5460,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_8connect_file(CYTHON_UNUSED 
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_1)) {
     PyObject *__pyx_temp[3] = {__pyx_t_5, __pyx_t_3, __pyx_int_1};
-    __pyx_t_4 = __Pyx_PyFunction_FastCall(__pyx_t_1, __pyx_temp+1-__pyx_t_6, 2+__pyx_t_6); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 131, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyFunction_FastCall(__pyx_t_1, __pyx_temp+1-__pyx_t_6, 2+__pyx_t_6); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 129, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -5605,14 +5469,14 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_8connect_file(CYTHON_UNUSED 
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_1)) {
     PyObject *__pyx_temp[3] = {__pyx_t_5, __pyx_t_3, __pyx_int_1};
-    __pyx_t_4 = __Pyx_PyCFunction_FastCall(__pyx_t_1, __pyx_temp+1-__pyx_t_6, 2+__pyx_t_6); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 131, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyCFunction_FastCall(__pyx_t_1, __pyx_temp+1-__pyx_t_6, 2+__pyx_t_6); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 129, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   } else
   #endif
   {
-    __pyx_t_2 = PyTuple_New(2+__pyx_t_6); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 131, __pyx_L1_error)
+    __pyx_t_2 = PyTuple_New(2+__pyx_t_6); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 129, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     if (__pyx_t_5) {
       __Pyx_GIVEREF(__pyx_t_5); PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_t_5); __pyx_t_5 = NULL;
@@ -5623,15 +5487,15 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_8connect_file(CYTHON_UNUSED 
     __Pyx_GIVEREF(__pyx_int_1);
     PyTuple_SET_ITEM(__pyx_t_2, 1+__pyx_t_6, __pyx_int_1);
     __pyx_t_3 = 0;
-    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_2, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 131, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_2, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 129, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue, __pyx_t_4) < 0) __PYX_ERR(0, 131, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue, __pyx_t_4) < 0) __PYX_ERR(0, 129, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-  /* "serialhdl.pyx":128
+  /* "serialhdl.pyx":126
  *             self.ffi_lib.serialqueue_set_receive_window(
  *                 self.serialqueue, receive_window)
  *     def connect_file(self, debugoutput, dictionary, pace=False):             # <<<<<<<<<<<<<<
@@ -5656,7 +5520,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_8connect_file(CYTHON_UNUSED 
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":132
+/* "serialhdl.pyx":130
  *         self.msgparser.process_identify(dictionary, decompress=False)
  *         self.serialqueue = self.ffi_lib.serialqueue_alloc(self.ser.fileno(), 1)
  *     def set_clock_est(self, freq, last_time, last_clock):             # <<<<<<<<<<<<<<
@@ -5702,23 +5566,23 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_11set_clock_est(PyObject *__
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_freq)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("set_clock_est", 1, 4, 4, 1); __PYX_ERR(0, 132, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("set_clock_est", 1, 4, 4, 1); __PYX_ERR(0, 130, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_last_time)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("set_clock_est", 1, 4, 4, 2); __PYX_ERR(0, 132, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("set_clock_est", 1, 4, 4, 2); __PYX_ERR(0, 130, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  3:
         if (likely((values[3] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_last_clock)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("set_clock_est", 1, 4, 4, 3); __PYX_ERR(0, 132, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("set_clock_est", 1, 4, 4, 3); __PYX_ERR(0, 130, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "set_clock_est") < 0)) __PYX_ERR(0, 132, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "set_clock_est") < 0)) __PYX_ERR(0, 130, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 4) {
       goto __pyx_L5_argtuple_error;
@@ -5735,7 +5599,7 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_11set_clock_est(PyObject *__
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("set_clock_est", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 132, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("set_clock_est", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 130, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("serialhdl.SerialReader.set_clock_est", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -5759,27 +5623,27 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_10set_clock_est(CYTHON_UNUSE
   PyObject *__pyx_t_6 = NULL;
   __Pyx_RefNannySetupContext("set_clock_est", 0);
 
-  /* "serialhdl.pyx":133
+  /* "serialhdl.pyx":131
  *         self.serialqueue = self.ffi_lib.serialqueue_alloc(self.ser.fileno(), 1)
  *     def set_clock_est(self, freq, last_time, last_clock):
  *         self.ffi_lib.serialqueue_set_clock_est(             # <<<<<<<<<<<<<<
  *             self.serialqueue, freq, last_time, last_clock)
  *     def disconnect(self):
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 133, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 131, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_serialqueue_set_clock_est); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 133, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_serialqueue_set_clock_est); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 131, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":134
+  /* "serialhdl.pyx":132
  *     def set_clock_est(self, freq, last_time, last_clock):
  *         self.ffi_lib.serialqueue_set_clock_est(
  *             self.serialqueue, freq, last_time, last_clock)             # <<<<<<<<<<<<<<
  *     def disconnect(self):
  *         if self.serialqueue is not None:
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 134, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 132, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_4 = NULL;
   __pyx_t_5 = 0;
@@ -5796,7 +5660,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_10set_clock_est(CYTHON_UNUSE
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[5] = {__pyx_t_4, __pyx_t_2, __pyx_v_freq, __pyx_v_last_time, __pyx_v_last_clock};
-    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_5, 4+__pyx_t_5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 133, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_5, 4+__pyx_t_5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 131, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -5805,14 +5669,14 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_10set_clock_est(CYTHON_UNUSE
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[5] = {__pyx_t_4, __pyx_t_2, __pyx_v_freq, __pyx_v_last_time, __pyx_v_last_clock};
-    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_5, 4+__pyx_t_5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 133, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_5, 4+__pyx_t_5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 131, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   } else
   #endif
   {
-    __pyx_t_6 = PyTuple_New(4+__pyx_t_5); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 133, __pyx_L1_error)
+    __pyx_t_6 = PyTuple_New(4+__pyx_t_5); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 131, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     if (__pyx_t_4) {
       __Pyx_GIVEREF(__pyx_t_4); PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_t_4); __pyx_t_4 = NULL;
@@ -5829,14 +5693,14 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_10set_clock_est(CYTHON_UNUSE
     __Pyx_GIVEREF(__pyx_v_last_clock);
     PyTuple_SET_ITEM(__pyx_t_6, 3+__pyx_t_5, __pyx_v_last_clock);
     __pyx_t_2 = 0;
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_6, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 133, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_6, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 131, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   }
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":132
+  /* "serialhdl.pyx":130
  *         self.msgparser.process_identify(dictionary, decompress=False)
  *         self.serialqueue = self.ffi_lib.serialqueue_alloc(self.ser.fileno(), 1)
  *     def set_clock_est(self, freq, last_time, last_clock):             # <<<<<<<<<<<<<<
@@ -5861,7 +5725,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_10set_clock_est(CYTHON_UNUSE
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":135
+/* "serialhdl.pyx":133
  *         self.ffi_lib.serialqueue_set_clock_est(
  *             self.serialqueue, freq, last_time, last_clock)
  *     def disconnect(self):             # <<<<<<<<<<<<<<
@@ -5899,33 +5763,33 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_12disconnect(CYTHON_UNUSED P
   int __pyx_t_10;
   __Pyx_RefNannySetupContext("disconnect", 0);
 
-  /* "serialhdl.pyx":136
+  /* "serialhdl.pyx":134
  *             self.serialqueue, freq, last_time, last_clock)
  *     def disconnect(self):
  *         if self.serialqueue is not None:             # <<<<<<<<<<<<<<
  *             self.ffi_lib.serialqueue_exit(self.serialqueue)
  *             if self.background_thread is not None:
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 136, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 134, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_2 = (__pyx_t_1 != Py_None);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_3 = (__pyx_t_2 != 0);
   if (__pyx_t_3) {
 
-    /* "serialhdl.pyx":137
+    /* "serialhdl.pyx":135
  *     def disconnect(self):
  *         if self.serialqueue is not None:
  *             self.ffi_lib.serialqueue_exit(self.serialqueue)             # <<<<<<<<<<<<<<
  *             if self.background_thread is not None:
  *                 self.background_thread.join()
  */
-    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 137, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 135, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_serialqueue_exit); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 137, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_serialqueue_exit); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 135, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 137, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 135, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __pyx_t_6 = NULL;
     if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_5))) {
@@ -5940,35 +5804,35 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_12disconnect(CYTHON_UNUSED P
     __pyx_t_1 = (__pyx_t_6) ? __Pyx_PyObject_Call2Args(__pyx_t_5, __pyx_t_6, __pyx_t_4) : __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_t_4);
     __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 137, __pyx_L1_error)
+    if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 135, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-    /* "serialhdl.pyx":138
+    /* "serialhdl.pyx":136
  *         if self.serialqueue is not None:
  *             self.ffi_lib.serialqueue_exit(self.serialqueue)
  *             if self.background_thread is not None:             # <<<<<<<<<<<<<<
  *                 self.background_thread.join()
  *             self.ffi_lib.serialqueue_free(self.serialqueue)
  */
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_background_thread); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 138, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_background_thread); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 136, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __pyx_t_3 = (__pyx_t_1 != Py_None);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __pyx_t_2 = (__pyx_t_3 != 0);
     if (__pyx_t_2) {
 
-      /* "serialhdl.pyx":139
+      /* "serialhdl.pyx":137
  *             self.ffi_lib.serialqueue_exit(self.serialqueue)
  *             if self.background_thread is not None:
  *                 self.background_thread.join()             # <<<<<<<<<<<<<<
  *             self.ffi_lib.serialqueue_free(self.serialqueue)
  *             self.background_thread = self.serialqueue = None
  */
-      __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_background_thread); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 139, __pyx_L1_error)
+      __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_background_thread); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 137, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_5);
-      __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_join); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 139, __pyx_L1_error)
+      __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_join); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 137, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
       __pyx_t_5 = NULL;
@@ -5983,12 +5847,12 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_12disconnect(CYTHON_UNUSED P
       }
       __pyx_t_1 = (__pyx_t_5) ? __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_5) : __Pyx_PyObject_CallNoArg(__pyx_t_4);
       __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
-      if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 139, __pyx_L1_error)
+      if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 137, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-      /* "serialhdl.pyx":138
+      /* "serialhdl.pyx":136
  *         if self.serialqueue is not None:
  *             self.ffi_lib.serialqueue_exit(self.serialqueue)
  *             if self.background_thread is not None:             # <<<<<<<<<<<<<<
@@ -5997,19 +5861,19 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_12disconnect(CYTHON_UNUSED P
  */
     }
 
-    /* "serialhdl.pyx":140
+    /* "serialhdl.pyx":138
  *             if self.background_thread is not None:
  *                 self.background_thread.join()
  *             self.ffi_lib.serialqueue_free(self.serialqueue)             # <<<<<<<<<<<<<<
  *             self.background_thread = self.serialqueue = None
  *         if self.ser is not None:
  */
-    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 140, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 138, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_serialqueue_free); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 140, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_serialqueue_free); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 138, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 140, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 138, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __pyx_t_6 = NULL;
     if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_5))) {
@@ -6024,22 +5888,22 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_12disconnect(CYTHON_UNUSED P
     __pyx_t_1 = (__pyx_t_6) ? __Pyx_PyObject_Call2Args(__pyx_t_5, __pyx_t_6, __pyx_t_4) : __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_t_4);
     __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 140, __pyx_L1_error)
+    if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 138, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-    /* "serialhdl.pyx":141
+    /* "serialhdl.pyx":139
  *                 self.background_thread.join()
  *             self.ffi_lib.serialqueue_free(self.serialqueue)
  *             self.background_thread = self.serialqueue = None             # <<<<<<<<<<<<<<
  *         if self.ser is not None:
  *             self.ser.close()
  */
-    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_background_thread, Py_None) < 0) __PYX_ERR(0, 141, __pyx_L1_error)
-    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue, Py_None) < 0) __PYX_ERR(0, 141, __pyx_L1_error)
+    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_background_thread, Py_None) < 0) __PYX_ERR(0, 139, __pyx_L1_error)
+    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue, Py_None) < 0) __PYX_ERR(0, 139, __pyx_L1_error)
 
-    /* "serialhdl.pyx":136
+    /* "serialhdl.pyx":134
  *             self.serialqueue, freq, last_time, last_clock)
  *     def disconnect(self):
  *         if self.serialqueue is not None:             # <<<<<<<<<<<<<<
@@ -6048,30 +5912,30 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_12disconnect(CYTHON_UNUSED P
  */
   }
 
-  /* "serialhdl.pyx":142
+  /* "serialhdl.pyx":140
  *             self.ffi_lib.serialqueue_free(self.serialqueue)
  *             self.background_thread = self.serialqueue = None
  *         if self.ser is not None:             # <<<<<<<<<<<<<<
  *             self.ser.close()
  *             self.ser = None
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ser); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 142, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ser); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 140, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_2 = (__pyx_t_1 != Py_None);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_3 = (__pyx_t_2 != 0);
   if (__pyx_t_3) {
 
-    /* "serialhdl.pyx":143
+    /* "serialhdl.pyx":141
  *             self.background_thread = self.serialqueue = None
  *         if self.ser is not None:
  *             self.ser.close()             # <<<<<<<<<<<<<<
  *             self.ser = None
  *         for pn in self.pending_notifications.values():
  */
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ser); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 143, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ser); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 141, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_close); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 143, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_close); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 141, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __pyx_t_5 = NULL;
@@ -6086,21 +5950,21 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_12disconnect(CYTHON_UNUSED P
     }
     __pyx_t_1 = (__pyx_t_5) ? __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_5) : __Pyx_PyObject_CallNoArg(__pyx_t_4);
     __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
-    if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 143, __pyx_L1_error)
+    if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 141, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-    /* "serialhdl.pyx":144
+    /* "serialhdl.pyx":142
  *         if self.ser is not None:
  *             self.ser.close()
  *             self.ser = None             # <<<<<<<<<<<<<<
  *         for pn in self.pending_notifications.values():
  *             pn.complete(None)
  */
-    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_ser, Py_None) < 0) __PYX_ERR(0, 144, __pyx_L1_error)
+    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_ser, Py_None) < 0) __PYX_ERR(0, 142, __pyx_L1_error)
 
-    /* "serialhdl.pyx":142
+    /* "serialhdl.pyx":140
  *             self.ffi_lib.serialqueue_free(self.serialqueue)
  *             self.background_thread = self.serialqueue = None
  *         if self.ser is not None:             # <<<<<<<<<<<<<<
@@ -6109,7 +5973,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_12disconnect(CYTHON_UNUSED P
  */
   }
 
-  /* "serialhdl.pyx":145
+  /* "serialhdl.pyx":143
  *             self.ser.close()
  *             self.ser = None
  *         for pn in self.pending_notifications.values():             # <<<<<<<<<<<<<<
@@ -6117,13 +5981,13 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_12disconnect(CYTHON_UNUSED P
  *         self.pending_notifications.clear()
  */
   __pyx_t_7 = 0;
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_pending_notifications); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 145, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_pending_notifications); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 143, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   if (unlikely(__pyx_t_4 == Py_None)) {
     PyErr_Format(PyExc_AttributeError, "'NoneType' object has no attribute '%.30s'", "values");
-    __PYX_ERR(0, 145, __pyx_L1_error)
+    __PYX_ERR(0, 143, __pyx_L1_error)
   }
-  __pyx_t_5 = __Pyx_dict_iterator(__pyx_t_4, 0, __pyx_n_s_values, (&__pyx_t_8), (&__pyx_t_9)); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 145, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_dict_iterator(__pyx_t_4, 0, __pyx_n_s_values, (&__pyx_t_8), (&__pyx_t_9)); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 143, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_XDECREF(__pyx_t_1);
@@ -6132,19 +5996,19 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_12disconnect(CYTHON_UNUSED P
   while (1) {
     __pyx_t_10 = __Pyx_dict_iter_next(__pyx_t_1, __pyx_t_8, &__pyx_t_7, NULL, &__pyx_t_5, NULL, __pyx_t_9);
     if (unlikely(__pyx_t_10 == 0)) break;
-    if (unlikely(__pyx_t_10 == -1)) __PYX_ERR(0, 145, __pyx_L1_error)
+    if (unlikely(__pyx_t_10 == -1)) __PYX_ERR(0, 143, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_XDECREF_SET(__pyx_v_pn, __pyx_t_5);
     __pyx_t_5 = 0;
 
-    /* "serialhdl.pyx":146
+    /* "serialhdl.pyx":144
  *             self.ser = None
  *         for pn in self.pending_notifications.values():
  *             pn.complete(None)             # <<<<<<<<<<<<<<
  *         self.pending_notifications.clear()
  *     def stats(self, eventtime):
  */
-    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_pn, __pyx_n_s_complete); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 146, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_pn, __pyx_n_s_complete); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 144, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __pyx_t_6 = NULL;
     if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_4))) {
@@ -6158,23 +6022,23 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_12disconnect(CYTHON_UNUSED P
     }
     __pyx_t_5 = (__pyx_t_6) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_6, Py_None) : __Pyx_PyObject_CallOneArg(__pyx_t_4, Py_None);
     __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
-    if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 146, __pyx_L1_error)
+    if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 144, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":147
+  /* "serialhdl.pyx":145
  *         for pn in self.pending_notifications.values():
  *             pn.complete(None)
  *         self.pending_notifications.clear()             # <<<<<<<<<<<<<<
  *     def stats(self, eventtime):
  *         if self.serialqueue is None:
  */
-  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_pending_notifications); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 147, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_pending_notifications); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 145, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_clear); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 147, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_clear); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 145, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __pyx_t_5 = NULL;
@@ -6189,12 +6053,12 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_12disconnect(CYTHON_UNUSED P
   }
   __pyx_t_1 = (__pyx_t_5) ? __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_5) : __Pyx_PyObject_CallNoArg(__pyx_t_4);
   __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 147, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 145, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":135
+  /* "serialhdl.pyx":133
  *         self.ffi_lib.serialqueue_set_clock_est(
  *             self.serialqueue, freq, last_time, last_clock)
  *     def disconnect(self):             # <<<<<<<<<<<<<<
@@ -6219,7 +6083,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_12disconnect(CYTHON_UNUSED P
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":148
+/* "serialhdl.pyx":146
  *             pn.complete(None)
  *         self.pending_notifications.clear()
  *     def stats(self, eventtime):             # <<<<<<<<<<<<<<
@@ -6259,11 +6123,11 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_15stats(PyObject *__pyx_self
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_eventtime)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("stats", 1, 2, 2, 1); __PYX_ERR(0, 148, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("stats", 1, 2, 2, 1); __PYX_ERR(0, 146, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "stats") < 0)) __PYX_ERR(0, 148, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "stats") < 0)) __PYX_ERR(0, 146, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -6276,7 +6140,7 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_15stats(PyObject *__pyx_self
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("stats", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 148, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("stats", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 146, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("serialhdl.SerialReader.stats", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -6305,21 +6169,21 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_14stats(CYTHON_UNUSED PyObje
   PyObject *__pyx_t_11 = NULL;
   __Pyx_RefNannySetupContext("stats", 0);
 
-  /* "serialhdl.pyx":149
+  /* "serialhdl.pyx":147
  *         self.pending_notifications.clear()
  *     def stats(self, eventtime):
  *         if self.serialqueue is None:             # <<<<<<<<<<<<<<
  *             return ""
  *         self.ffi_lib.serialqueue_get_stats(
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 149, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 147, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_2 = (__pyx_t_1 == Py_None);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_3 = (__pyx_t_2 != 0);
   if (__pyx_t_3) {
 
-    /* "serialhdl.pyx":150
+    /* "serialhdl.pyx":148
  *     def stats(self, eventtime):
  *         if self.serialqueue is None:
  *             return ""             # <<<<<<<<<<<<<<
@@ -6331,7 +6195,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_14stats(CYTHON_UNUSED PyObje
     __pyx_r = __pyx_kp_u__2;
     goto __pyx_L0;
 
-    /* "serialhdl.pyx":149
+    /* "serialhdl.pyx":147
  *         self.pending_notifications.clear()
  *     def stats(self, eventtime):
  *         if self.serialqueue is None:             # <<<<<<<<<<<<<<
@@ -6340,35 +6204,35 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_14stats(CYTHON_UNUSED PyObje
  */
   }
 
-  /* "serialhdl.pyx":151
+  /* "serialhdl.pyx":149
  *         if self.serialqueue is None:
  *             return ""
  *         self.ffi_lib.serialqueue_get_stats(             # <<<<<<<<<<<<<<
  *             self.serialqueue, self.stats_buf, len(self.stats_buf))
  *         return self.ffi_main.string(self.stats_buf).decode()
  */
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 151, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 149, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_serialqueue_get_stats); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 151, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_serialqueue_get_stats); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 149, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-  /* "serialhdl.pyx":152
+  /* "serialhdl.pyx":150
  *             return ""
  *         self.ffi_lib.serialqueue_get_stats(
  *             self.serialqueue, self.stats_buf, len(self.stats_buf))             # <<<<<<<<<<<<<<
  *         return self.ffi_main.string(self.stats_buf).decode()
  *     def get_reactor(self):
  */
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 152, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 150, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_stats_buf); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 152, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_stats_buf); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 150, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
-  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_stats_buf); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 152, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_stats_buf); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 150, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  __pyx_t_8 = PyObject_Length(__pyx_t_7); if (unlikely(__pyx_t_8 == ((Py_ssize_t)-1))) __PYX_ERR(0, 152, __pyx_L1_error)
+  __pyx_t_8 = PyObject_Length(__pyx_t_7); if (unlikely(__pyx_t_8 == ((Py_ssize_t)-1))) __PYX_ERR(0, 150, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-  __pyx_t_7 = PyInt_FromSsize_t(__pyx_t_8); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 152, __pyx_L1_error)
+  __pyx_t_7 = PyInt_FromSsize_t(__pyx_t_8); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 150, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __pyx_t_9 = NULL;
   __pyx_t_10 = 0;
@@ -6385,7 +6249,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_14stats(CYTHON_UNUSED PyObje
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_5)) {
     PyObject *__pyx_temp[4] = {__pyx_t_9, __pyx_t_4, __pyx_t_6, __pyx_t_7};
-    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_10, 3+__pyx_t_10); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 151, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_10, 3+__pyx_t_10); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 149, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
@@ -6396,7 +6260,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_14stats(CYTHON_UNUSED PyObje
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_5)) {
     PyObject *__pyx_temp[4] = {__pyx_t_9, __pyx_t_4, __pyx_t_6, __pyx_t_7};
-    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_10, 3+__pyx_t_10); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 151, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_10, 3+__pyx_t_10); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 149, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
@@ -6405,7 +6269,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_14stats(CYTHON_UNUSED PyObje
   } else
   #endif
   {
-    __pyx_t_11 = PyTuple_New(3+__pyx_t_10); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 151, __pyx_L1_error)
+    __pyx_t_11 = PyTuple_New(3+__pyx_t_10); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 149, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_11);
     if (__pyx_t_9) {
       __Pyx_GIVEREF(__pyx_t_9); PyTuple_SET_ITEM(__pyx_t_11, 0, __pyx_t_9); __pyx_t_9 = NULL;
@@ -6419,14 +6283,14 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_14stats(CYTHON_UNUSED PyObje
     __pyx_t_4 = 0;
     __pyx_t_6 = 0;
     __pyx_t_7 = 0;
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_11, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 151, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_11, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 149, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
   }
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":153
+  /* "serialhdl.pyx":151
  *         self.ffi_lib.serialqueue_get_stats(
  *             self.serialqueue, self.stats_buf, len(self.stats_buf))
  *         return self.ffi_main.string(self.stats_buf).decode()             # <<<<<<<<<<<<<<
@@ -6434,12 +6298,12 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_14stats(CYTHON_UNUSED PyObje
  *         return self.reactor
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_11 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_main); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 153, __pyx_L1_error)
+  __pyx_t_11 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_main); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 151, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_11);
-  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_11, __pyx_n_s_string); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 153, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_11, __pyx_n_s_string); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 151, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
-  __pyx_t_11 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_stats_buf); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 153, __pyx_L1_error)
+  __pyx_t_11 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_stats_buf); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 151, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_11);
   __pyx_t_6 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_7))) {
@@ -6454,10 +6318,10 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_14stats(CYTHON_UNUSED PyObje
   __pyx_t_5 = (__pyx_t_6) ? __Pyx_PyObject_Call2Args(__pyx_t_7, __pyx_t_6, __pyx_t_11) : __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_t_11);
   __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
   __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
-  if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 153, __pyx_L1_error)
+  if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 151, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_decode); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 153, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_decode); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 151, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __pyx_t_5 = NULL;
@@ -6472,14 +6336,14 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_14stats(CYTHON_UNUSED PyObje
   }
   __pyx_t_1 = (__pyx_t_5) ? __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_t_5) : __Pyx_PyObject_CallNoArg(__pyx_t_7);
   __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 153, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 151, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "serialhdl.pyx":148
+  /* "serialhdl.pyx":146
  *             pn.complete(None)
  *         self.pending_notifications.clear()
  *     def stats(self, eventtime):             # <<<<<<<<<<<<<<
@@ -6504,7 +6368,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_14stats(CYTHON_UNUSED PyObje
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":154
+/* "serialhdl.pyx":152
  *             self.serialqueue, self.stats_buf, len(self.stats_buf))
  *         return self.ffi_main.string(self.stats_buf).decode()
  *     def get_reactor(self):             # <<<<<<<<<<<<<<
@@ -6532,7 +6396,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_16get_reactor(CYTHON_UNUSED 
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("get_reactor", 0);
 
-  /* "serialhdl.pyx":155
+  /* "serialhdl.pyx":153
  *         return self.ffi_main.string(self.stats_buf).decode()
  *     def get_reactor(self):
  *         return self.reactor             # <<<<<<<<<<<<<<
@@ -6540,13 +6404,13 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_16get_reactor(CYTHON_UNUSED 
  *         return self.msgparser
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_reactor); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 155, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_reactor); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 153, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "serialhdl.pyx":154
+  /* "serialhdl.pyx":152
  *             self.serialqueue, self.stats_buf, len(self.stats_buf))
  *         return self.ffi_main.string(self.stats_buf).decode()
  *     def get_reactor(self):             # <<<<<<<<<<<<<<
@@ -6565,7 +6429,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_16get_reactor(CYTHON_UNUSED 
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":156
+/* "serialhdl.pyx":154
  *     def get_reactor(self):
  *         return self.reactor
  *     def get_msgparser(self):             # <<<<<<<<<<<<<<
@@ -6593,7 +6457,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_18get_msgparser(CYTHON_UNUSE
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("get_msgparser", 0);
 
-  /* "serialhdl.pyx":157
+  /* "serialhdl.pyx":155
  *         return self.reactor
  *     def get_msgparser(self):
  *         return self.msgparser             # <<<<<<<<<<<<<<
@@ -6601,13 +6465,13 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_18get_msgparser(CYTHON_UNUSE
  *         return self.default_cmd_queue
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_msgparser); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 157, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_msgparser); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 155, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "serialhdl.pyx":156
+  /* "serialhdl.pyx":154
  *     def get_reactor(self):
  *         return self.reactor
  *     def get_msgparser(self):             # <<<<<<<<<<<<<<
@@ -6626,7 +6490,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_18get_msgparser(CYTHON_UNUSE
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":158
+/* "serialhdl.pyx":156
  *     def get_msgparser(self):
  *         return self.msgparser
  *     def get_default_command_queue(self):             # <<<<<<<<<<<<<<
@@ -6654,7 +6518,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_20get_default_command_queue(
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("get_default_command_queue", 0);
 
-  /* "serialhdl.pyx":159
+  /* "serialhdl.pyx":157
  *         return self.msgparser
  *     def get_default_command_queue(self):
  *         return self.default_cmd_queue             # <<<<<<<<<<<<<<
@@ -6662,13 +6526,13 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_20get_default_command_queue(
  *     def register_response(self, callback, name, oid=None):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_default_cmd_queue); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 159, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_default_cmd_queue); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 157, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "serialhdl.pyx":158
+  /* "serialhdl.pyx":156
  *     def get_msgparser(self):
  *         return self.msgparser
  *     def get_default_command_queue(self):             # <<<<<<<<<<<<<<
@@ -6687,7 +6551,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_20get_default_command_queue(
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":161
+/* "serialhdl.pyx":159
  *         return self.default_cmd_queue
  *     # Serial response callbacks
  *     def register_response(self, callback, name, oid=None):             # <<<<<<<<<<<<<<
@@ -6734,13 +6598,13 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_23register_response(PyObject
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_callback)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("register_response", 0, 3, 4, 1); __PYX_ERR(0, 161, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("register_response", 0, 3, 4, 1); __PYX_ERR(0, 159, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_name_2)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("register_response", 0, 3, 4, 2); __PYX_ERR(0, 161, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("register_response", 0, 3, 4, 2); __PYX_ERR(0, 159, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  3:
@@ -6750,7 +6614,7 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_23register_response(PyObject
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "register_response") < 0)) __PYX_ERR(0, 161, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "register_response") < 0)) __PYX_ERR(0, 159, __pyx_L3_error)
       }
     } else {
       switch (PyTuple_GET_SIZE(__pyx_args)) {
@@ -6770,7 +6634,7 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_23register_response(PyObject
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("register_response", 0, 3, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 161, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("register_response", 0, 3, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 159, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("serialhdl.SerialReader.register_response", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -6799,7 +6663,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_22register_response(CYTHON_U
   PyObject *__pyx_t_11 = NULL;
   __Pyx_RefNannySetupContext("register_response", 0);
 
-  /* "serialhdl.pyx":162
+  /* "serialhdl.pyx":160
  *     # Serial response callbacks
  *     def register_response(self, callback, name, oid=None):
  *         with self.lock:             # <<<<<<<<<<<<<<
@@ -6807,11 +6671,11 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_22register_response(CYTHON_U
  *                 del self.handlers[name, oid]
  */
   /*with:*/ {
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_lock); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 162, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_lock); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 160, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_2 = __Pyx_PyObject_LookupSpecial(__pyx_t_1, __pyx_n_s_exit); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 162, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_LookupSpecial(__pyx_t_1, __pyx_n_s_exit); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 160, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_4 = __Pyx_PyObject_LookupSpecial(__pyx_t_1, __pyx_n_s_enter); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 162, __pyx_L3_error)
+    __pyx_t_4 = __Pyx_PyObject_LookupSpecial(__pyx_t_1, __pyx_n_s_enter); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 160, __pyx_L3_error)
     __Pyx_GOTREF(__pyx_t_4);
     __pyx_t_5 = NULL;
     if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_4))) {
@@ -6825,7 +6689,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_22register_response(CYTHON_U
     }
     __pyx_t_3 = (__pyx_t_5) ? __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_5) : __Pyx_PyObject_CallNoArg(__pyx_t_4);
     __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
-    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 162, __pyx_L3_error)
+    if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 160, __pyx_L3_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -6840,7 +6704,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_22register_response(CYTHON_U
         __Pyx_XGOTREF(__pyx_t_8);
         /*try:*/ {
 
-          /* "serialhdl.pyx":163
+          /* "serialhdl.pyx":161
  *     def register_response(self, callback, name, oid=None):
  *         with self.lock:
  *             if callback is None:             # <<<<<<<<<<<<<<
@@ -6851,16 +6715,16 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_22register_response(CYTHON_U
           __pyx_t_10 = (__pyx_t_9 != 0);
           if (__pyx_t_10) {
 
-            /* "serialhdl.pyx":164
+            /* "serialhdl.pyx":162
  *         with self.lock:
  *             if callback is None:
  *                 del self.handlers[name, oid]             # <<<<<<<<<<<<<<
  *             else:
  *                 self.handlers[name, oid] = callback
  */
-            __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_handlers); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 164, __pyx_L7_error)
+            __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_handlers); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 162, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_1);
-            __pyx_t_3 = PyTuple_New(2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 164, __pyx_L7_error)
+            __pyx_t_3 = PyTuple_New(2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 162, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_3);
             __Pyx_INCREF(__pyx_v_name);
             __Pyx_GIVEREF(__pyx_v_name);
@@ -6868,11 +6732,11 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_22register_response(CYTHON_U
             __Pyx_INCREF(__pyx_v_oid);
             __Pyx_GIVEREF(__pyx_v_oid);
             PyTuple_SET_ITEM(__pyx_t_3, 1, __pyx_v_oid);
-            if (unlikely(PyObject_DelItem(__pyx_t_1, __pyx_t_3) < 0)) __PYX_ERR(0, 164, __pyx_L7_error)
+            if (unlikely(PyObject_DelItem(__pyx_t_1, __pyx_t_3) < 0)) __PYX_ERR(0, 162, __pyx_L7_error)
             __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
             __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-            /* "serialhdl.pyx":163
+            /* "serialhdl.pyx":161
  *     def register_response(self, callback, name, oid=None):
  *         with self.lock:
  *             if callback is None:             # <<<<<<<<<<<<<<
@@ -6882,7 +6746,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_22register_response(CYTHON_U
             goto __pyx_L13;
           }
 
-          /* "serialhdl.pyx":166
+          /* "serialhdl.pyx":164
  *                 del self.handlers[name, oid]
  *             else:
  *                 self.handlers[name, oid] = callback             # <<<<<<<<<<<<<<
@@ -6890,9 +6754,9 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_22register_response(CYTHON_U
  *     def raw_send(self, cmd, minclock, reqclock, cmd_queue):
  */
           /*else*/ {
-            __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_handlers); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 166, __pyx_L7_error)
+            __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_handlers); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 164, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_3);
-            __pyx_t_1 = PyTuple_New(2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 166, __pyx_L7_error)
+            __pyx_t_1 = PyTuple_New(2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 164, __pyx_L7_error)
             __Pyx_GOTREF(__pyx_t_1);
             __Pyx_INCREF(__pyx_v_name);
             __Pyx_GIVEREF(__pyx_v_name);
@@ -6900,13 +6764,13 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_22register_response(CYTHON_U
             __Pyx_INCREF(__pyx_v_oid);
             __Pyx_GIVEREF(__pyx_v_oid);
             PyTuple_SET_ITEM(__pyx_t_1, 1, __pyx_v_oid);
-            if (unlikely(PyObject_SetItem(__pyx_t_3, __pyx_t_1, __pyx_v_callback) < 0)) __PYX_ERR(0, 166, __pyx_L7_error)
+            if (unlikely(PyObject_SetItem(__pyx_t_3, __pyx_t_1, __pyx_v_callback) < 0)) __PYX_ERR(0, 164, __pyx_L7_error)
             __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
             __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
           }
           __pyx_L13:;
 
-          /* "serialhdl.pyx":162
+          /* "serialhdl.pyx":160
  *     # Serial response callbacks
  *     def register_response(self, callback, name, oid=None):
  *         with self.lock:             # <<<<<<<<<<<<<<
@@ -6925,20 +6789,20 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_22register_response(CYTHON_U
         __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
         /*except:*/ {
           __Pyx_AddTraceback("serialhdl.SerialReader.register_response", __pyx_clineno, __pyx_lineno, __pyx_filename);
-          if (__Pyx_GetException(&__pyx_t_1, &__pyx_t_3, &__pyx_t_4) < 0) __PYX_ERR(0, 162, __pyx_L9_except_error)
+          if (__Pyx_GetException(&__pyx_t_1, &__pyx_t_3, &__pyx_t_4) < 0) __PYX_ERR(0, 160, __pyx_L9_except_error)
           __Pyx_GOTREF(__pyx_t_1);
           __Pyx_GOTREF(__pyx_t_3);
           __Pyx_GOTREF(__pyx_t_4);
-          __pyx_t_5 = PyTuple_Pack(3, __pyx_t_1, __pyx_t_3, __pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 162, __pyx_L9_except_error)
+          __pyx_t_5 = PyTuple_Pack(3, __pyx_t_1, __pyx_t_3, __pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 160, __pyx_L9_except_error)
           __Pyx_GOTREF(__pyx_t_5);
           __pyx_t_11 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_5, NULL);
           __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
           __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-          if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 162, __pyx_L9_except_error)
+          if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 160, __pyx_L9_except_error)
           __Pyx_GOTREF(__pyx_t_11);
           __pyx_t_10 = __Pyx_PyObject_IsTrue(__pyx_t_11);
           __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
-          if (__pyx_t_10 < 0) __PYX_ERR(0, 162, __pyx_L9_except_error)
+          if (__pyx_t_10 < 0) __PYX_ERR(0, 160, __pyx_L9_except_error)
           __pyx_t_9 = ((!(__pyx_t_10 != 0)) != 0);
           if (__pyx_t_9) {
             __Pyx_GIVEREF(__pyx_t_1);
@@ -6946,7 +6810,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_22register_response(CYTHON_U
             __Pyx_XGIVEREF(__pyx_t_4);
             __Pyx_ErrRestoreWithState(__pyx_t_1, __pyx_t_3, __pyx_t_4);
             __pyx_t_1 = 0; __pyx_t_3 = 0; __pyx_t_4 = 0; 
-            __PYX_ERR(0, 162, __pyx_L9_except_error)
+            __PYX_ERR(0, 160, __pyx_L9_except_error)
           }
           __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
           __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -6972,7 +6836,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_22register_response(CYTHON_U
         if (__pyx_t_2) {
           __pyx_t_8 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_tuple_, NULL);
           __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-          if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 162, __pyx_L1_error)
+          if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 160, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_8);
           __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
         }
@@ -6987,7 +6851,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_22register_response(CYTHON_U
     __pyx_L17:;
   }
 
-  /* "serialhdl.pyx":161
+  /* "serialhdl.pyx":159
  *         return self.default_cmd_queue
  *     # Serial response callbacks
  *     def register_response(self, callback, name, oid=None):             # <<<<<<<<<<<<<<
@@ -7011,7 +6875,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_22register_response(CYTHON_U
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":168
+/* "serialhdl.pyx":166
  *                 self.handlers[name, oid] = callback
  *     # Command sending
  *     def raw_send(self, cmd, minclock, reqclock, cmd_queue):             # <<<<<<<<<<<<<<
@@ -7060,29 +6924,29 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_25raw_send(PyObject *__pyx_s
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_cmd)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("raw_send", 1, 5, 5, 1); __PYX_ERR(0, 168, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("raw_send", 1, 5, 5, 1); __PYX_ERR(0, 166, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_minclock)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("raw_send", 1, 5, 5, 2); __PYX_ERR(0, 168, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("raw_send", 1, 5, 5, 2); __PYX_ERR(0, 166, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  3:
         if (likely((values[3] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_reqclock)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("raw_send", 1, 5, 5, 3); __PYX_ERR(0, 168, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("raw_send", 1, 5, 5, 3); __PYX_ERR(0, 166, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  4:
         if (likely((values[4] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_cmd_queue)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("raw_send", 1, 5, 5, 4); __PYX_ERR(0, 168, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("raw_send", 1, 5, 5, 4); __PYX_ERR(0, 166, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "raw_send") < 0)) __PYX_ERR(0, 168, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "raw_send") < 0)) __PYX_ERR(0, 166, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 5) {
       goto __pyx_L5_argtuple_error;
@@ -7101,7 +6965,7 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_25raw_send(PyObject *__pyx_s
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("raw_send", 1, 5, 5, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 168, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("raw_send", 1, 5, 5, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 166, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("serialhdl.SerialReader.raw_send", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -7127,30 +6991,30 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_24raw_send(CYTHON_UNUSED PyO
   PyObject *__pyx_t_8 = NULL;
   __Pyx_RefNannySetupContext("raw_send", 0);
 
-  /* "serialhdl.pyx":169
+  /* "serialhdl.pyx":167
  *     # Command sending
  *     def raw_send(self, cmd, minclock, reqclock, cmd_queue):
  *         self.ffi_lib.serialqueue_send(self.serialqueue, cmd_queue,             # <<<<<<<<<<<<<<
  *                                       cmd, len(cmd), minclock, reqclock, 0)
  *     def raw_send_wait_ack(self, cmd, minclock, reqclock, cmd_queue):
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 169, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 167, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_serialqueue_send); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 169, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_serialqueue_send); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 167, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 169, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 167, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
 
-  /* "serialhdl.pyx":170
+  /* "serialhdl.pyx":168
  *     def raw_send(self, cmd, minclock, reqclock, cmd_queue):
  *         self.ffi_lib.serialqueue_send(self.serialqueue, cmd_queue,
  *                                       cmd, len(cmd), minclock, reqclock, 0)             # <<<<<<<<<<<<<<
  *     def raw_send_wait_ack(self, cmd, minclock, reqclock, cmd_queue):
  *         self.last_notify_id += 1
  */
-  __pyx_t_4 = PyObject_Length(__pyx_v_cmd); if (unlikely(__pyx_t_4 == ((Py_ssize_t)-1))) __PYX_ERR(0, 170, __pyx_L1_error)
-  __pyx_t_5 = PyInt_FromSsize_t(__pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 170, __pyx_L1_error)
+  __pyx_t_4 = PyObject_Length(__pyx_v_cmd); if (unlikely(__pyx_t_4 == ((Py_ssize_t)-1))) __PYX_ERR(0, 168, __pyx_L1_error)
+  __pyx_t_5 = PyInt_FromSsize_t(__pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 168, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __pyx_t_6 = NULL;
   __pyx_t_7 = 0;
@@ -7167,7 +7031,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_24raw_send(CYTHON_UNUSED PyO
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[8] = {__pyx_t_6, __pyx_t_2, __pyx_v_cmd_queue, __pyx_v_cmd, __pyx_t_5, __pyx_v_minclock, __pyx_v_reqclock, __pyx_int_0};
-    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_7, 7+__pyx_t_7); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 169, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_7, 7+__pyx_t_7); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 167, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -7177,7 +7041,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_24raw_send(CYTHON_UNUSED PyO
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[8] = {__pyx_t_6, __pyx_t_2, __pyx_v_cmd_queue, __pyx_v_cmd, __pyx_t_5, __pyx_v_minclock, __pyx_v_reqclock, __pyx_int_0};
-    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_7, 7+__pyx_t_7); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 169, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_7, 7+__pyx_t_7); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 167, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -7185,7 +7049,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_24raw_send(CYTHON_UNUSED PyO
   } else
   #endif
   {
-    __pyx_t_8 = PyTuple_New(7+__pyx_t_7); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 169, __pyx_L1_error)
+    __pyx_t_8 = PyTuple_New(7+__pyx_t_7); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 167, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     if (__pyx_t_6) {
       __Pyx_GIVEREF(__pyx_t_6); PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_6); __pyx_t_6 = NULL;
@@ -7211,14 +7075,14 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_24raw_send(CYTHON_UNUSED PyO
     PyTuple_SET_ITEM(__pyx_t_8, 6+__pyx_t_7, __pyx_int_0);
     __pyx_t_2 = 0;
     __pyx_t_5 = 0;
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_8, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 169, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_8, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 167, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   }
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":168
+  /* "serialhdl.pyx":166
  *                 self.handlers[name, oid] = callback
  *     # Command sending
  *     def raw_send(self, cmd, minclock, reqclock, cmd_queue):             # <<<<<<<<<<<<<<
@@ -7244,7 +7108,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_24raw_send(CYTHON_UNUSED PyO
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":171
+/* "serialhdl.pyx":169
  *         self.ffi_lib.serialqueue_send(self.serialqueue, cmd_queue,
  *                                       cmd, len(cmd), minclock, reqclock, 0)
  *     def raw_send_wait_ack(self, cmd, minclock, reqclock, cmd_queue):             # <<<<<<<<<<<<<<
@@ -7293,29 +7157,29 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_27raw_send_wait_ack(PyObject
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_cmd)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("raw_send_wait_ack", 1, 5, 5, 1); __PYX_ERR(0, 171, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("raw_send_wait_ack", 1, 5, 5, 1); __PYX_ERR(0, 169, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_minclock)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("raw_send_wait_ack", 1, 5, 5, 2); __PYX_ERR(0, 171, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("raw_send_wait_ack", 1, 5, 5, 2); __PYX_ERR(0, 169, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  3:
         if (likely((values[3] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_reqclock)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("raw_send_wait_ack", 1, 5, 5, 3); __PYX_ERR(0, 171, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("raw_send_wait_ack", 1, 5, 5, 3); __PYX_ERR(0, 169, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  4:
         if (likely((values[4] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_cmd_queue)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("raw_send_wait_ack", 1, 5, 5, 4); __PYX_ERR(0, 171, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("raw_send_wait_ack", 1, 5, 5, 4); __PYX_ERR(0, 169, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "raw_send_wait_ack") < 0)) __PYX_ERR(0, 171, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "raw_send_wait_ack") < 0)) __PYX_ERR(0, 169, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 5) {
       goto __pyx_L5_argtuple_error;
@@ -7334,7 +7198,7 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_27raw_send_wait_ack(PyObject
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("raw_send_wait_ack", 1, 5, 5, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 171, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("raw_send_wait_ack", 1, 5, 5, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 169, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("serialhdl.SerialReader.raw_send_wait_ack", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -7365,43 +7229,43 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_26raw_send_wait_ack(CYTHON_U
   int __pyx_t_10;
   __Pyx_RefNannySetupContext("raw_send_wait_ack", 0);
 
-  /* "serialhdl.pyx":172
+  /* "serialhdl.pyx":170
  *                                       cmd, len(cmd), minclock, reqclock, 0)
  *     def raw_send_wait_ack(self, cmd, minclock, reqclock, cmd_queue):
  *         self.last_notify_id += 1             # <<<<<<<<<<<<<<
  *         nid = self.last_notify_id
  *         completion = self.reactor.completion()
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_last_notify_id); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 172, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_last_notify_id); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 170, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyInt_AddObjC(__pyx_t_1, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 172, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_AddObjC(__pyx_t_1, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 170, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_last_notify_id, __pyx_t_2) < 0) __PYX_ERR(0, 172, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_last_notify_id, __pyx_t_2) < 0) __PYX_ERR(0, 170, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":173
+  /* "serialhdl.pyx":171
  *     def raw_send_wait_ack(self, cmd, minclock, reqclock, cmd_queue):
  *         self.last_notify_id += 1
  *         nid = self.last_notify_id             # <<<<<<<<<<<<<<
  *         completion = self.reactor.completion()
  *         self.pending_notifications[nid] = completion
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_last_notify_id); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 173, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_last_notify_id); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 171, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_v_nid = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":174
+  /* "serialhdl.pyx":172
  *         self.last_notify_id += 1
  *         nid = self.last_notify_id
  *         completion = self.reactor.completion()             # <<<<<<<<<<<<<<
  *         self.pending_notifications[nid] = completion
  *         self.ffi_lib.serialqueue_send(self.serialqueue, cmd_queue,
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_reactor); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 174, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_reactor); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 172, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_completion); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 174, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_completion); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 172, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_1 = NULL;
@@ -7416,48 +7280,48 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_26raw_send_wait_ack(CYTHON_U
   }
   __pyx_t_2 = (__pyx_t_1) ? __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_1) : __Pyx_PyObject_CallNoArg(__pyx_t_3);
   __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
-  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 174, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 172, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_completion = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":175
+  /* "serialhdl.pyx":173
  *         nid = self.last_notify_id
  *         completion = self.reactor.completion()
  *         self.pending_notifications[nid] = completion             # <<<<<<<<<<<<<<
  *         self.ffi_lib.serialqueue_send(self.serialqueue, cmd_queue,
  *                                       cmd, len(cmd), minclock, reqclock, nid)
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_pending_notifications); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 175, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_pending_notifications); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 173, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (unlikely(PyObject_SetItem(__pyx_t_2, __pyx_v_nid, __pyx_v_completion) < 0)) __PYX_ERR(0, 175, __pyx_L1_error)
+  if (unlikely(PyObject_SetItem(__pyx_t_2, __pyx_v_nid, __pyx_v_completion) < 0)) __PYX_ERR(0, 173, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":176
+  /* "serialhdl.pyx":174
  *         completion = self.reactor.completion()
  *         self.pending_notifications[nid] = completion
  *         self.ffi_lib.serialqueue_send(self.serialqueue, cmd_queue,             # <<<<<<<<<<<<<<
  *                                       cmd, len(cmd), minclock, reqclock, nid)
  *         params = completion.wait()
  */
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 176, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 174, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_serialqueue_send); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 176, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_serialqueue_send); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 174, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 176, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 174, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
 
-  /* "serialhdl.pyx":177
+  /* "serialhdl.pyx":175
  *         self.pending_notifications[nid] = completion
  *         self.ffi_lib.serialqueue_send(self.serialqueue, cmd_queue,
  *                                       cmd, len(cmd), minclock, reqclock, nid)             # <<<<<<<<<<<<<<
  *         params = completion.wait()
  *         if params is None:
  */
-  __pyx_t_4 = PyObject_Length(__pyx_v_cmd); if (unlikely(__pyx_t_4 == ((Py_ssize_t)-1))) __PYX_ERR(0, 177, __pyx_L1_error)
-  __pyx_t_5 = PyInt_FromSsize_t(__pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 177, __pyx_L1_error)
+  __pyx_t_4 = PyObject_Length(__pyx_v_cmd); if (unlikely(__pyx_t_4 == ((Py_ssize_t)-1))) __PYX_ERR(0, 175, __pyx_L1_error)
+  __pyx_t_5 = PyInt_FromSsize_t(__pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 175, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __pyx_t_6 = NULL;
   __pyx_t_7 = 0;
@@ -7474,7 +7338,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_26raw_send_wait_ack(CYTHON_U
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_1)) {
     PyObject *__pyx_temp[8] = {__pyx_t_6, __pyx_t_3, __pyx_v_cmd_queue, __pyx_v_cmd, __pyx_t_5, __pyx_v_minclock, __pyx_v_reqclock, __pyx_v_nid};
-    __pyx_t_2 = __Pyx_PyFunction_FastCall(__pyx_t_1, __pyx_temp+1-__pyx_t_7, 7+__pyx_t_7); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 176, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyFunction_FastCall(__pyx_t_1, __pyx_temp+1-__pyx_t_7, 7+__pyx_t_7); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 174, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -7484,7 +7348,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_26raw_send_wait_ack(CYTHON_U
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_1)) {
     PyObject *__pyx_temp[8] = {__pyx_t_6, __pyx_t_3, __pyx_v_cmd_queue, __pyx_v_cmd, __pyx_t_5, __pyx_v_minclock, __pyx_v_reqclock, __pyx_v_nid};
-    __pyx_t_2 = __Pyx_PyCFunction_FastCall(__pyx_t_1, __pyx_temp+1-__pyx_t_7, 7+__pyx_t_7); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 176, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyCFunction_FastCall(__pyx_t_1, __pyx_temp+1-__pyx_t_7, 7+__pyx_t_7); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 174, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -7492,7 +7356,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_26raw_send_wait_ack(CYTHON_U
   } else
   #endif
   {
-    __pyx_t_8 = PyTuple_New(7+__pyx_t_7); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 176, __pyx_L1_error)
+    __pyx_t_8 = PyTuple_New(7+__pyx_t_7); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 174, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     if (__pyx_t_6) {
       __Pyx_GIVEREF(__pyx_t_6); PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_6); __pyx_t_6 = NULL;
@@ -7518,21 +7382,21 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_26raw_send_wait_ack(CYTHON_U
     PyTuple_SET_ITEM(__pyx_t_8, 6+__pyx_t_7, __pyx_v_nid);
     __pyx_t_3 = 0;
     __pyx_t_5 = 0;
-    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_8, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 176, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_8, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 174, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":178
+  /* "serialhdl.pyx":176
  *         self.ffi_lib.serialqueue_send(self.serialqueue, cmd_queue,
  *                                       cmd, len(cmd), minclock, reqclock, nid)
  *         params = completion.wait()             # <<<<<<<<<<<<<<
  *         if params is None:
  *             raise error("Serial connection closed")
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_completion, __pyx_n_s_wait); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 178, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_completion, __pyx_n_s_wait); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 176, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_8 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_1))) {
@@ -7546,13 +7410,13 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_26raw_send_wait_ack(CYTHON_U
   }
   __pyx_t_2 = (__pyx_t_8) ? __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_8) : __Pyx_PyObject_CallNoArg(__pyx_t_1);
   __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
-  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 178, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 176, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_params = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":179
+  /* "serialhdl.pyx":177
  *                                       cmd, len(cmd), minclock, reqclock, nid)
  *         params = completion.wait()
  *         if params is None:             # <<<<<<<<<<<<<<
@@ -7563,14 +7427,14 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_26raw_send_wait_ack(CYTHON_U
   __pyx_t_10 = (__pyx_t_9 != 0);
   if (unlikely(__pyx_t_10)) {
 
-    /* "serialhdl.pyx":180
+    /* "serialhdl.pyx":178
  *         params = completion.wait()
  *         if params is None:
  *             raise error("Serial connection closed")             # <<<<<<<<<<<<<<
  *         return params
  *     def send(self, msg, minclock=0, reqclock=0):
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_error); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 180, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_error); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 178, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __pyx_t_8 = NULL;
     if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_1))) {
@@ -7584,14 +7448,14 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_26raw_send_wait_ack(CYTHON_U
     }
     __pyx_t_2 = (__pyx_t_8) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_8, __pyx_kp_u_Serial_connection_closed) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_kp_u_Serial_connection_closed);
     __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
-    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 180, __pyx_L1_error)
+    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 178, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_Raise(__pyx_t_2, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __PYX_ERR(0, 180, __pyx_L1_error)
+    __PYX_ERR(0, 178, __pyx_L1_error)
 
-    /* "serialhdl.pyx":179
+    /* "serialhdl.pyx":177
  *                                       cmd, len(cmd), minclock, reqclock, nid)
  *         params = completion.wait()
  *         if params is None:             # <<<<<<<<<<<<<<
@@ -7600,7 +7464,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_26raw_send_wait_ack(CYTHON_U
  */
   }
 
-  /* "serialhdl.pyx":181
+  /* "serialhdl.pyx":179
  *         if params is None:
  *             raise error("Serial connection closed")
  *         return params             # <<<<<<<<<<<<<<
@@ -7612,7 +7476,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_26raw_send_wait_ack(CYTHON_U
   __pyx_r = __pyx_v_params;
   goto __pyx_L0;
 
-  /* "serialhdl.pyx":171
+  /* "serialhdl.pyx":169
  *         self.ffi_lib.serialqueue_send(self.serialqueue, cmd_queue,
  *                                       cmd, len(cmd), minclock, reqclock, 0)
  *     def raw_send_wait_ack(self, cmd, minclock, reqclock, cmd_queue):             # <<<<<<<<<<<<<<
@@ -7639,7 +7503,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_26raw_send_wait_ack(CYTHON_U
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":182
+/* "serialhdl.pyx":180
  *             raise error("Serial connection closed")
  *         return params
  *     def send(self, msg, minclock=0, reqclock=0):             # <<<<<<<<<<<<<<
@@ -7687,7 +7551,7 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_29send(PyObject *__pyx_self,
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_msg)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("send", 0, 2, 4, 1); __PYX_ERR(0, 182, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("send", 0, 2, 4, 1); __PYX_ERR(0, 180, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
@@ -7703,7 +7567,7 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_29send(PyObject *__pyx_self,
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "send") < 0)) __PYX_ERR(0, 182, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "send") < 0)) __PYX_ERR(0, 180, __pyx_L3_error)
       }
     } else {
       switch (PyTuple_GET_SIZE(__pyx_args)) {
@@ -7724,7 +7588,7 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_29send(PyObject *__pyx_self,
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("send", 0, 2, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 182, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("send", 0, 2, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 180, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("serialhdl.SerialReader.send", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -7749,16 +7613,16 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_28send(CYTHON_UNUSED PyObjec
   PyObject *__pyx_t_6 = NULL;
   __Pyx_RefNannySetupContext("send", 0);
 
-  /* "serialhdl.pyx":183
+  /* "serialhdl.pyx":181
  *         return params
  *     def send(self, msg, minclock=0, reqclock=0):
  *         cmd = self.msgparser.create_command(msg)             # <<<<<<<<<<<<<<
  *         self.raw_send(cmd, minclock, reqclock, self.default_cmd_queue)
  *     def send_with_response(self, msg, response):
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_msgparser); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 183, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_msgparser); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 181, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_create_command); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 183, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_create_command); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 181, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_2 = NULL;
@@ -7773,22 +7637,22 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_28send(CYTHON_UNUSED PyObjec
   }
   __pyx_t_1 = (__pyx_t_2) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_2, __pyx_v_msg) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_v_msg);
   __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 183, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 181, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_cmd = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":184
+  /* "serialhdl.pyx":182
  *     def send(self, msg, minclock=0, reqclock=0):
  *         cmd = self.msgparser.create_command(msg)
  *         self.raw_send(cmd, minclock, reqclock, self.default_cmd_queue)             # <<<<<<<<<<<<<<
  *     def send_with_response(self, msg, response):
  *         cmd = self.msgparser.create_command(msg)
  */
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_raw_send); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 184, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_raw_send); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 182, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_default_cmd_queue); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 184, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_default_cmd_queue); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 182, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_4 = NULL;
   __pyx_t_5 = 0;
@@ -7805,7 +7669,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_28send(CYTHON_UNUSED PyObjec
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[5] = {__pyx_t_4, __pyx_v_cmd, __pyx_v_minclock, __pyx_v_reqclock, __pyx_t_2};
-    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_5, 4+__pyx_t_5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 184, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_5, 4+__pyx_t_5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 182, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -7814,14 +7678,14 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_28send(CYTHON_UNUSED PyObjec
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[5] = {__pyx_t_4, __pyx_v_cmd, __pyx_v_minclock, __pyx_v_reqclock, __pyx_t_2};
-    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_5, 4+__pyx_t_5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 184, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_5, 4+__pyx_t_5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 182, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   } else
   #endif
   {
-    __pyx_t_6 = PyTuple_New(4+__pyx_t_5); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 184, __pyx_L1_error)
+    __pyx_t_6 = PyTuple_New(4+__pyx_t_5); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 182, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     if (__pyx_t_4) {
       __Pyx_GIVEREF(__pyx_t_4); PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_t_4); __pyx_t_4 = NULL;
@@ -7838,14 +7702,14 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_28send(CYTHON_UNUSED PyObjec
     __Pyx_GIVEREF(__pyx_t_2);
     PyTuple_SET_ITEM(__pyx_t_6, 3+__pyx_t_5, __pyx_t_2);
     __pyx_t_2 = 0;
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_6, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 184, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_6, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 182, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   }
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":182
+  /* "serialhdl.pyx":180
  *             raise error("Serial connection closed")
  *         return params
  *     def send(self, msg, minclock=0, reqclock=0):             # <<<<<<<<<<<<<<
@@ -7871,7 +7735,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_28send(CYTHON_UNUSED PyObjec
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":185
+/* "serialhdl.pyx":183
  *         cmd = self.msgparser.create_command(msg)
  *         self.raw_send(cmd, minclock, reqclock, self.default_cmd_queue)
  *     def send_with_response(self, msg, response):             # <<<<<<<<<<<<<<
@@ -7914,17 +7778,17 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_31send_with_response(PyObjec
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_msg)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("send_with_response", 1, 3, 3, 1); __PYX_ERR(0, 185, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("send_with_response", 1, 3, 3, 1); __PYX_ERR(0, 183, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_response)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("send_with_response", 1, 3, 3, 2); __PYX_ERR(0, 185, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("send_with_response", 1, 3, 3, 2); __PYX_ERR(0, 183, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "send_with_response") < 0)) __PYX_ERR(0, 185, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "send_with_response") < 0)) __PYX_ERR(0, 183, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 3) {
       goto __pyx_L5_argtuple_error;
@@ -7939,7 +7803,7 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_31send_with_response(PyObjec
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("send_with_response", 1, 3, 3, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 185, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("send_with_response", 1, 3, 3, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 183, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("serialhdl.SerialReader.send_with_response", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -7965,16 +7829,16 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_30send_with_response(CYTHON_
   PyObject *__pyx_t_6 = NULL;
   __Pyx_RefNannySetupContext("send_with_response", 0);
 
-  /* "serialhdl.pyx":186
+  /* "serialhdl.pyx":184
  *         self.raw_send(cmd, minclock, reqclock, self.default_cmd_queue)
  *     def send_with_response(self, msg, response):
  *         cmd = self.msgparser.create_command(msg)             # <<<<<<<<<<<<<<
  *         src = SerialRetryCommand(self, response)
  *         return src.get_response(cmd, self.default_cmd_queue)
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_msgparser); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 186, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_msgparser); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 184, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_create_command); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 186, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_create_command); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 184, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_2 = NULL;
@@ -7989,20 +7853,20 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_30send_with_response(CYTHON_
   }
   __pyx_t_1 = (__pyx_t_2) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_2, __pyx_v_msg) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_v_msg);
   __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 186, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 184, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_cmd = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":187
+  /* "serialhdl.pyx":185
  *     def send_with_response(self, msg, response):
  *         cmd = self.msgparser.create_command(msg)
  *         src = SerialRetryCommand(self, response)             # <<<<<<<<<<<<<<
  *         return src.get_response(cmd, self.default_cmd_queue)
  *     def alloc_command_queue(self):
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_SerialRetryCommand); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 187, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_SerialRetryCommand); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 185, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_t_2 = NULL;
   __pyx_t_4 = 0;
@@ -8019,7 +7883,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_30send_with_response(CYTHON_
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[3] = {__pyx_t_2, __pyx_v_self, __pyx_v_response};
-    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_4, 2+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 187, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_4, 2+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 185, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_GOTREF(__pyx_t_1);
   } else
@@ -8027,13 +7891,13 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_30send_with_response(CYTHON_
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[3] = {__pyx_t_2, __pyx_v_self, __pyx_v_response};
-    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_4, 2+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 187, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_4, 2+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 185, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_GOTREF(__pyx_t_1);
   } else
   #endif
   {
-    __pyx_t_5 = PyTuple_New(2+__pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 187, __pyx_L1_error)
+    __pyx_t_5 = PyTuple_New(2+__pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 185, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     if (__pyx_t_2) {
       __Pyx_GIVEREF(__pyx_t_2); PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_2); __pyx_t_2 = NULL;
@@ -8044,7 +7908,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_30send_with_response(CYTHON_
     __Pyx_INCREF(__pyx_v_response);
     __Pyx_GIVEREF(__pyx_v_response);
     PyTuple_SET_ITEM(__pyx_t_5, 1+__pyx_t_4, __pyx_v_response);
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_5, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 187, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_5, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 185, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   }
@@ -8052,7 +7916,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_30send_with_response(CYTHON_
   __pyx_v_src = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":188
+  /* "serialhdl.pyx":186
  *         cmd = self.msgparser.create_command(msg)
  *         src = SerialRetryCommand(self, response)
  *         return src.get_response(cmd, self.default_cmd_queue)             # <<<<<<<<<<<<<<
@@ -8060,9 +7924,9 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_30send_with_response(CYTHON_
  *         return self.ffi_main.gc(self.ffi_lib.serialqueue_alloc_commandqueue(),
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_src, __pyx_n_s_get_response); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 188, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_src, __pyx_n_s_get_response); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 186, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_default_cmd_queue); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 188, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_default_cmd_queue); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 186, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __pyx_t_2 = NULL;
   __pyx_t_4 = 0;
@@ -8079,7 +7943,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_30send_with_response(CYTHON_
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[3] = {__pyx_t_2, __pyx_v_cmd, __pyx_t_5};
-    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_4, 2+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 188, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_4, 2+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 186, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
@@ -8088,14 +7952,14 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_30send_with_response(CYTHON_
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[3] = {__pyx_t_2, __pyx_v_cmd, __pyx_t_5};
-    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_4, 2+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 188, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_4, 2+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 186, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   } else
   #endif
   {
-    __pyx_t_6 = PyTuple_New(2+__pyx_t_4); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 188, __pyx_L1_error)
+    __pyx_t_6 = PyTuple_New(2+__pyx_t_4); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 186, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     if (__pyx_t_2) {
       __Pyx_GIVEREF(__pyx_t_2); PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_t_2); __pyx_t_2 = NULL;
@@ -8106,7 +7970,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_30send_with_response(CYTHON_
     __Pyx_GIVEREF(__pyx_t_5);
     PyTuple_SET_ITEM(__pyx_t_6, 1+__pyx_t_4, __pyx_t_5);
     __pyx_t_5 = 0;
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_6, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 188, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_6, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 186, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   }
@@ -8115,7 +7979,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_30send_with_response(CYTHON_
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "serialhdl.pyx":185
+  /* "serialhdl.pyx":183
  *         cmd = self.msgparser.create_command(msg)
  *         self.raw_send(cmd, minclock, reqclock, self.default_cmd_queue)
  *     def send_with_response(self, msg, response):             # <<<<<<<<<<<<<<
@@ -8140,7 +8004,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_30send_with_response(CYTHON_
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":189
+/* "serialhdl.pyx":187
  *         src = SerialRetryCommand(self, response)
  *         return src.get_response(cmd, self.default_cmd_queue)
  *     def alloc_command_queue(self):             # <<<<<<<<<<<<<<
@@ -8174,7 +8038,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_32alloc_command_queue(CYTHON
   PyObject *__pyx_t_7 = NULL;
   __Pyx_RefNannySetupContext("alloc_command_queue", 0);
 
-  /* "serialhdl.pyx":190
+  /* "serialhdl.pyx":188
  *         return src.get_response(cmd, self.default_cmd_queue)
  *     def alloc_command_queue(self):
  *         return self.ffi_main.gc(self.ffi_lib.serialqueue_alloc_commandqueue(),             # <<<<<<<<<<<<<<
@@ -8182,14 +8046,14 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_32alloc_command_queue(CYTHON
  *     # Dumping debug lists
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_main); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 190, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_main); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 188, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_gc); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 190, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_gc); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 188, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 190, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 188, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_serialqueue_alloc_commandqueue); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 190, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_serialqueue_alloc_commandqueue); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 188, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_t_4 = NULL;
@@ -8204,20 +8068,20 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_32alloc_command_queue(CYTHON
   }
   __pyx_t_2 = (__pyx_t_4) ? __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_t_4) : __Pyx_PyObject_CallNoArg(__pyx_t_5);
   __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 190, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 188, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
 
-  /* "serialhdl.pyx":191
+  /* "serialhdl.pyx":189
  *     def alloc_command_queue(self):
  *         return self.ffi_main.gc(self.ffi_lib.serialqueue_alloc_commandqueue(),
  *                                 self.ffi_lib.serialqueue_free_commandqueue)             # <<<<<<<<<<<<<<
  *     # Dumping debug lists
  *     def dump_debug(self):
  */
-  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 191, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 189, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_serialqueue_free_commandqueue); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 191, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_serialqueue_free_commandqueue); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 189, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __pyx_t_5 = NULL;
@@ -8235,7 +8099,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_32alloc_command_queue(CYTHON
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[3] = {__pyx_t_5, __pyx_t_2, __pyx_t_4};
-    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_6, 2+__pyx_t_6); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 190, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_6, 2+__pyx_t_6); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 188, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -8245,7 +8109,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_32alloc_command_queue(CYTHON
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[3] = {__pyx_t_5, __pyx_t_2, __pyx_t_4};
-    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_6, 2+__pyx_t_6); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 190, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_6, 2+__pyx_t_6); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 188, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -8253,7 +8117,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_32alloc_command_queue(CYTHON
   } else
   #endif
   {
-    __pyx_t_7 = PyTuple_New(2+__pyx_t_6); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 190, __pyx_L1_error)
+    __pyx_t_7 = PyTuple_New(2+__pyx_t_6); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 188, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     if (__pyx_t_5) {
       __Pyx_GIVEREF(__pyx_t_5); PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_t_5); __pyx_t_5 = NULL;
@@ -8264,7 +8128,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_32alloc_command_queue(CYTHON
     PyTuple_SET_ITEM(__pyx_t_7, 1+__pyx_t_6, __pyx_t_4);
     __pyx_t_2 = 0;
     __pyx_t_4 = 0;
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_7, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 190, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_7, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 188, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   }
@@ -8273,7 +8137,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_32alloc_command_queue(CYTHON
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "serialhdl.pyx":189
+  /* "serialhdl.pyx":187
  *         src = SerialRetryCommand(self, response)
  *         return src.get_response(cmd, self.default_cmd_queue)
  *     def alloc_command_queue(self):             # <<<<<<<<<<<<<<
@@ -8297,7 +8161,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_32alloc_command_queue(CYTHON
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":193
+/* "serialhdl.pyx":191
  *                                 self.ffi_lib.serialqueue_free_commandqueue)
  *     # Dumping debug lists
  *     def dump_debug(self):             # <<<<<<<<<<<<<<
@@ -8344,30 +8208,30 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
   Py_ssize_t __pyx_t_12;
   __Pyx_RefNannySetupContext("dump_debug", 0);
 
-  /* "serialhdl.pyx":194
+  /* "serialhdl.pyx":192
  *     # Dumping debug lists
  *     def dump_debug(self):
  *         out = []             # <<<<<<<<<<<<<<
  *         out.append("Dumping serial stats: %s" % (
  *             self.stats(self.reactor.monotonic()),))
  */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 194, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 192, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_out = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":196
+  /* "serialhdl.pyx":194
  *         out = []
  *         out.append("Dumping serial stats: %s" % (
  *             self.stats(self.reactor.monotonic()),))             # <<<<<<<<<<<<<<
  *         sdata = self.ffi_main.new('struct pull_queue_message[1024]')
  *         rdata = self.ffi_main.new('struct pull_queue_message[1024]')
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_stats); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 196, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_stats); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 194, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_reactor); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 196, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_reactor); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 194, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 196, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 194, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_t_4 = NULL;
@@ -8382,7 +8246,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
   }
   __pyx_t_3 = (__pyx_t_4) ? __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_t_4) : __Pyx_PyObject_CallNoArg(__pyx_t_5);
   __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 196, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 194, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __pyx_t_5 = NULL;
@@ -8398,36 +8262,36 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
   __pyx_t_1 = (__pyx_t_5) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_5, __pyx_t_3) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3);
   __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 196, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 194, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = __Pyx_PyObject_FormatSimpleAndDecref(PyObject_Unicode(__pyx_t_1), __pyx_empty_unicode); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 196, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_FormatSimpleAndDecref(PyObject_Unicode(__pyx_t_1), __pyx_empty_unicode); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 194, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":195
+  /* "serialhdl.pyx":193
  *     def dump_debug(self):
  *         out = []
  *         out.append("Dumping serial stats: %s" % (             # <<<<<<<<<<<<<<
  *             self.stats(self.reactor.monotonic()),))
  *         sdata = self.ffi_main.new('struct pull_queue_message[1024]')
  */
-  __pyx_t_1 = __Pyx_PyUnicode_Concat(__pyx_kp_u_Dumping_serial_stats, __pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 195, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyUnicode_Concat(__pyx_kp_u_Dumping_serial_stats, __pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 193, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_out, __pyx_t_1); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 195, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_out, __pyx_t_1); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 193, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":197
+  /* "serialhdl.pyx":195
  *         out.append("Dumping serial stats: %s" % (
  *             self.stats(self.reactor.monotonic()),))
  *         sdata = self.ffi_main.new('struct pull_queue_message[1024]')             # <<<<<<<<<<<<<<
  *         rdata = self.ffi_main.new('struct pull_queue_message[1024]')
  *         scount = self.ffi_lib.serialqueue_extract_old(
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_main); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 197, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_main); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 195, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_new); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 197, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_new); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 195, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_2 = NULL;
@@ -8442,22 +8306,22 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
   }
   __pyx_t_1 = (__pyx_t_2) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_2, __pyx_kp_u_struct_pull_queue_message_1024) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_kp_u_struct_pull_queue_message_1024);
   __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 197, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 195, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_sdata = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":198
+  /* "serialhdl.pyx":196
  *             self.stats(self.reactor.monotonic()),))
  *         sdata = self.ffi_main.new('struct pull_queue_message[1024]')
  *         rdata = self.ffi_main.new('struct pull_queue_message[1024]')             # <<<<<<<<<<<<<<
  *         scount = self.ffi_lib.serialqueue_extract_old(
  *             self.serialqueue, 1, sdata, len(sdata))
  */
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_main); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 198, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_main); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 196, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_new); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 198, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_new); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 196, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_t_3 = NULL;
@@ -8472,36 +8336,36 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
   }
   __pyx_t_1 = (__pyx_t_3) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_3, __pyx_kp_u_struct_pull_queue_message_1024) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_kp_u_struct_pull_queue_message_1024);
   __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 198, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 196, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_rdata = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":199
+  /* "serialhdl.pyx":197
  *         sdata = self.ffi_main.new('struct pull_queue_message[1024]')
  *         rdata = self.ffi_main.new('struct pull_queue_message[1024]')
  *         scount = self.ffi_lib.serialqueue_extract_old(             # <<<<<<<<<<<<<<
  *             self.serialqueue, 1, sdata, len(sdata))
  *         rcount = self.ffi_lib.serialqueue_extract_old(
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 199, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 197, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_serialqueue_extract_old); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 199, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_serialqueue_extract_old); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 197, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":200
+  /* "serialhdl.pyx":198
  *         rdata = self.ffi_main.new('struct pull_queue_message[1024]')
  *         scount = self.ffi_lib.serialqueue_extract_old(
  *             self.serialqueue, 1, sdata, len(sdata))             # <<<<<<<<<<<<<<
  *         rcount = self.ffi_lib.serialqueue_extract_old(
  *             self.serialqueue, 0, rdata, len(rdata))
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 200, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 198, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_7 = PyObject_Length(__pyx_v_sdata); if (unlikely(__pyx_t_7 == ((Py_ssize_t)-1))) __PYX_ERR(0, 200, __pyx_L1_error)
-  __pyx_t_5 = PyInt_FromSsize_t(__pyx_t_7); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 200, __pyx_L1_error)
+  __pyx_t_7 = PyObject_Length(__pyx_v_sdata); if (unlikely(__pyx_t_7 == ((Py_ssize_t)-1))) __PYX_ERR(0, 198, __pyx_L1_error)
+  __pyx_t_5 = PyInt_FromSsize_t(__pyx_t_7); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 198, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __pyx_t_4 = NULL;
   __pyx_t_8 = 0;
@@ -8518,7 +8382,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[5] = {__pyx_t_4, __pyx_t_2, __pyx_int_1, __pyx_v_sdata, __pyx_t_5};
-    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_8, 4+__pyx_t_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 199, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_8, 4+__pyx_t_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 197, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -8528,7 +8392,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[5] = {__pyx_t_4, __pyx_t_2, __pyx_int_1, __pyx_v_sdata, __pyx_t_5};
-    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_8, 4+__pyx_t_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 199, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_8, 4+__pyx_t_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 197, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -8536,7 +8400,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
   } else
   #endif
   {
-    __pyx_t_9 = PyTuple_New(4+__pyx_t_8); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 199, __pyx_L1_error)
+    __pyx_t_9 = PyTuple_New(4+__pyx_t_8); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 197, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     if (__pyx_t_4) {
       __Pyx_GIVEREF(__pyx_t_4); PyTuple_SET_ITEM(__pyx_t_9, 0, __pyx_t_4); __pyx_t_4 = NULL;
@@ -8553,7 +8417,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
     PyTuple_SET_ITEM(__pyx_t_9, 3+__pyx_t_8, __pyx_t_5);
     __pyx_t_2 = 0;
     __pyx_t_5 = 0;
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_9, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 199, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_9, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 197, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   }
@@ -8561,30 +8425,30 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
   __pyx_v_scount = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":201
+  /* "serialhdl.pyx":199
  *         scount = self.ffi_lib.serialqueue_extract_old(
  *             self.serialqueue, 1, sdata, len(sdata))
  *         rcount = self.ffi_lib.serialqueue_extract_old(             # <<<<<<<<<<<<<<
  *             self.serialqueue, 0, rdata, len(rdata))
  *         out.append("Dumping send queue %d messages" % (scount,))
  */
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 201, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_ffi_lib); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 199, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_serialqueue_extract_old); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 201, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_serialqueue_extract_old); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 199, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "serialhdl.pyx":202
+  /* "serialhdl.pyx":200
  *             self.serialqueue, 1, sdata, len(sdata))
  *         rcount = self.ffi_lib.serialqueue_extract_old(
  *             self.serialqueue, 0, rdata, len(rdata))             # <<<<<<<<<<<<<<
  *         out.append("Dumping send queue %d messages" % (scount,))
  *         for i in range(scount):
  */
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 202, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serialqueue); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 200, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_7 = PyObject_Length(__pyx_v_rdata); if (unlikely(__pyx_t_7 == ((Py_ssize_t)-1))) __PYX_ERR(0, 202, __pyx_L1_error)
-  __pyx_t_5 = PyInt_FromSsize_t(__pyx_t_7); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 202, __pyx_L1_error)
+  __pyx_t_7 = PyObject_Length(__pyx_v_rdata); if (unlikely(__pyx_t_7 == ((Py_ssize_t)-1))) __PYX_ERR(0, 200, __pyx_L1_error)
+  __pyx_t_5 = PyInt_FromSsize_t(__pyx_t_7); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 200, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __pyx_t_2 = NULL;
   __pyx_t_8 = 0;
@@ -8601,7 +8465,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_9)) {
     PyObject *__pyx_temp[5] = {__pyx_t_2, __pyx_t_3, __pyx_int_0, __pyx_v_rdata, __pyx_t_5};
-    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_9, __pyx_temp+1-__pyx_t_8, 4+__pyx_t_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 201, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_9, __pyx_temp+1-__pyx_t_8, 4+__pyx_t_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 199, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -8611,7 +8475,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_9)) {
     PyObject *__pyx_temp[5] = {__pyx_t_2, __pyx_t_3, __pyx_int_0, __pyx_v_rdata, __pyx_t_5};
-    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_9, __pyx_temp+1-__pyx_t_8, 4+__pyx_t_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 201, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_9, __pyx_temp+1-__pyx_t_8, 4+__pyx_t_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 199, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -8619,7 +8483,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
   } else
   #endif
   {
-    __pyx_t_4 = PyTuple_New(4+__pyx_t_8); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 201, __pyx_L1_error)
+    __pyx_t_4 = PyTuple_New(4+__pyx_t_8); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 199, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     if (__pyx_t_2) {
       __Pyx_GIVEREF(__pyx_t_2); PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_2); __pyx_t_2 = NULL;
@@ -8636,7 +8500,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
     PyTuple_SET_ITEM(__pyx_t_4, 3+__pyx_t_8, __pyx_t_5);
     __pyx_t_3 = 0;
     __pyx_t_5 = 0;
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_9, __pyx_t_4, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 201, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_9, __pyx_t_4, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 199, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   }
@@ -8644,14 +8508,14 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
   __pyx_v_rcount = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":203
+  /* "serialhdl.pyx":201
  *         rcount = self.ffi_lib.serialqueue_extract_old(
  *             self.serialqueue, 0, rdata, len(rdata))
  *         out.append("Dumping send queue %d messages" % (scount,))             # <<<<<<<<<<<<<<
  *         for i in range(scount):
  *             msg = sdata[i]
  */
-  __pyx_t_1 = PyTuple_New(3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 203, __pyx_L1_error)
+  __pyx_t_1 = PyTuple_New(3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 201, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_7 = 0;
   __pyx_t_10 = 127;
@@ -8659,7 +8523,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
   __pyx_t_7 += 19;
   __Pyx_GIVEREF(__pyx_kp_u_Dumping_send_queue);
   PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_kp_u_Dumping_send_queue);
-  __pyx_t_9 = __Pyx_PyObject_Format(__pyx_v_scount, __pyx_n_u_d); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 203, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_Format(__pyx_v_scount, __pyx_n_u_d); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 201, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __pyx_t_10 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_9) > __pyx_t_10) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_9) : __pyx_t_10;
   __pyx_t_7 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_9);
@@ -8670,28 +8534,28 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
   __pyx_t_7 += 9;
   __Pyx_GIVEREF(__pyx_kp_u_messages);
   PyTuple_SET_ITEM(__pyx_t_1, 2, __pyx_kp_u_messages);
-  __pyx_t_9 = __Pyx_PyUnicode_Join(__pyx_t_1, 3, __pyx_t_7, __pyx_t_10); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 203, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyUnicode_Join(__pyx_t_1, 3, __pyx_t_7, __pyx_t_10); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 201, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_out, __pyx_t_9); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 203, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_out, __pyx_t_9); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 201, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-  /* "serialhdl.pyx":204
+  /* "serialhdl.pyx":202
  *             self.serialqueue, 0, rdata, len(rdata))
  *         out.append("Dumping send queue %d messages" % (scount,))
  *         for i in range(scount):             # <<<<<<<<<<<<<<
  *             msg = sdata[i]
  *             cmds = self.msgparser.dump(msg.msg[0:msg.len])
  */
-  __pyx_t_9 = __Pyx_PyObject_CallOneArg(__pyx_builtin_range, __pyx_v_scount); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 204, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_CallOneArg(__pyx_builtin_range, __pyx_v_scount); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 202, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   if (likely(PyList_CheckExact(__pyx_t_9)) || PyTuple_CheckExact(__pyx_t_9)) {
     __pyx_t_1 = __pyx_t_9; __Pyx_INCREF(__pyx_t_1); __pyx_t_7 = 0;
     __pyx_t_11 = NULL;
   } else {
-    __pyx_t_7 = -1; __pyx_t_1 = PyObject_GetIter(__pyx_t_9); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 204, __pyx_L1_error)
+    __pyx_t_7 = -1; __pyx_t_1 = PyObject_GetIter(__pyx_t_9); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 202, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_11 = Py_TYPE(__pyx_t_1)->tp_iternext; if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 204, __pyx_L1_error)
+    __pyx_t_11 = Py_TYPE(__pyx_t_1)->tp_iternext; if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 202, __pyx_L1_error)
   }
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   for (;;) {
@@ -8699,17 +8563,17 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
       if (likely(PyList_CheckExact(__pyx_t_1))) {
         if (__pyx_t_7 >= PyList_GET_SIZE(__pyx_t_1)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_9 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_7); __Pyx_INCREF(__pyx_t_9); __pyx_t_7++; if (unlikely(0 < 0)) __PYX_ERR(0, 204, __pyx_L1_error)
+        __pyx_t_9 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_7); __Pyx_INCREF(__pyx_t_9); __pyx_t_7++; if (unlikely(0 < 0)) __PYX_ERR(0, 202, __pyx_L1_error)
         #else
-        __pyx_t_9 = PySequence_ITEM(__pyx_t_1, __pyx_t_7); __pyx_t_7++; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 204, __pyx_L1_error)
+        __pyx_t_9 = PySequence_ITEM(__pyx_t_1, __pyx_t_7); __pyx_t_7++; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 202, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
         #endif
       } else {
         if (__pyx_t_7 >= PyTuple_GET_SIZE(__pyx_t_1)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_9 = PyTuple_GET_ITEM(__pyx_t_1, __pyx_t_7); __Pyx_INCREF(__pyx_t_9); __pyx_t_7++; if (unlikely(0 < 0)) __PYX_ERR(0, 204, __pyx_L1_error)
+        __pyx_t_9 = PyTuple_GET_ITEM(__pyx_t_1, __pyx_t_7); __Pyx_INCREF(__pyx_t_9); __pyx_t_7++; if (unlikely(0 < 0)) __PYX_ERR(0, 202, __pyx_L1_error)
         #else
-        __pyx_t_9 = PySequence_ITEM(__pyx_t_1, __pyx_t_7); __pyx_t_7++; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 204, __pyx_L1_error)
+        __pyx_t_9 = PySequence_ITEM(__pyx_t_1, __pyx_t_7); __pyx_t_7++; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 202, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
         #endif
       }
@@ -8719,7 +8583,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
         PyObject* exc_type = PyErr_Occurred();
         if (exc_type) {
           if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-          else __PYX_ERR(0, 204, __pyx_L1_error)
+          else __PYX_ERR(0, 202, __pyx_L1_error)
         }
         break;
       }
@@ -8728,35 +8592,35 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
     __Pyx_XDECREF_SET(__pyx_v_i, __pyx_t_9);
     __pyx_t_9 = 0;
 
-    /* "serialhdl.pyx":205
+    /* "serialhdl.pyx":203
  *         out.append("Dumping send queue %d messages" % (scount,))
  *         for i in range(scount):
  *             msg = sdata[i]             # <<<<<<<<<<<<<<
  *             cmds = self.msgparser.dump(msg.msg[0:msg.len])
  *             out.append("Sent %d %f %f %d: %s" % (
  */
-    __pyx_t_9 = __Pyx_PyObject_GetItem(__pyx_v_sdata, __pyx_v_i); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 205, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyObject_GetItem(__pyx_v_sdata, __pyx_v_i); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 203, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_XDECREF_SET(__pyx_v_msg, __pyx_t_9);
     __pyx_t_9 = 0;
 
-    /* "serialhdl.pyx":206
+    /* "serialhdl.pyx":204
  *         for i in range(scount):
  *             msg = sdata[i]
  *             cmds = self.msgparser.dump(msg.msg[0:msg.len])             # <<<<<<<<<<<<<<
  *             out.append("Sent %d %f %f %d: %s" % (
  *                 i, msg.receive_time, msg.sent_time, msg.len, ', '.join(cmds)))
  */
-    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_msgparser); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 206, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_msgparser); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 204, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_dump); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 206, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_dump); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 204, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_msg, __pyx_n_s_msg); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 206, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_msg, __pyx_n_s_msg); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 204, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_msg, __pyx_n_s_len); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 206, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_msg, __pyx_n_s_len); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 204, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_2 = __Pyx_PyObject_GetSlice(__pyx_t_4, 0, 0, NULL, &__pyx_t_3, NULL, 1, 0, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 206, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_GetSlice(__pyx_t_4, 0, 0, NULL, &__pyx_t_3, NULL, 1, 0, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 204, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -8773,20 +8637,20 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
     __pyx_t_9 = (__pyx_t_3) ? __Pyx_PyObject_Call2Args(__pyx_t_5, __pyx_t_3, __pyx_t_2) : __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_t_2);
     __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 206, __pyx_L1_error)
+    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 204, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __Pyx_XDECREF_SET(__pyx_v_cmds, __pyx_t_9);
     __pyx_t_9 = 0;
 
-    /* "serialhdl.pyx":207
+    /* "serialhdl.pyx":205
  *             msg = sdata[i]
  *             cmds = self.msgparser.dump(msg.msg[0:msg.len])
  *             out.append("Sent %d %f %f %d: %s" % (             # <<<<<<<<<<<<<<
  *                 i, msg.receive_time, msg.sent_time, msg.len, ', '.join(cmds)))
  *         out.append("Dumping receive queue %d messages" % (rcount,))
  */
-    __pyx_t_9 = PyTuple_New(10); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 207, __pyx_L1_error)
+    __pyx_t_9 = PyTuple_New(10); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 205, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __pyx_t_12 = 0;
     __pyx_t_10 = 127;
@@ -8795,14 +8659,14 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
     __Pyx_GIVEREF(__pyx_kp_u_Sent);
     PyTuple_SET_ITEM(__pyx_t_9, 0, __pyx_kp_u_Sent);
 
-    /* "serialhdl.pyx":208
+    /* "serialhdl.pyx":206
  *             cmds = self.msgparser.dump(msg.msg[0:msg.len])
  *             out.append("Sent %d %f %f %d: %s" % (
  *                 i, msg.receive_time, msg.sent_time, msg.len, ', '.join(cmds)))             # <<<<<<<<<<<<<<
  *         out.append("Dumping receive queue %d messages" % (rcount,))
  *         for i in range(rcount):
  */
-    __pyx_t_5 = __Pyx_PyObject_Format(__pyx_v_i, __pyx_n_u_d); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 208, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_Format(__pyx_v_i, __pyx_n_u_d); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 206, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __pyx_t_10 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_5) > __pyx_t_10) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_5) : __pyx_t_10;
     __pyx_t_12 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_5);
@@ -8813,9 +8677,9 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
     __pyx_t_12 += 1;
     __Pyx_GIVEREF(__pyx_kp_u__5);
     PyTuple_SET_ITEM(__pyx_t_9, 2, __pyx_kp_u__5);
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_msg, __pyx_n_s_receive_time_2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 208, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_msg, __pyx_n_s_receive_time_2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 206, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_2 = __Pyx_PyObject_Format(__pyx_t_5, __pyx_n_u_f); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 208, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_Format(__pyx_t_5, __pyx_n_u_f); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 206, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __pyx_t_10 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_2) > __pyx_t_10) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_2) : __pyx_t_10;
@@ -8827,9 +8691,9 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
     __pyx_t_12 += 1;
     __Pyx_GIVEREF(__pyx_kp_u__5);
     PyTuple_SET_ITEM(__pyx_t_9, 4, __pyx_kp_u__5);
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_msg, __pyx_n_s_sent_time_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 208, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_msg, __pyx_n_s_sent_time_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 206, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_5 = __Pyx_PyObject_Format(__pyx_t_2, __pyx_n_u_f); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 208, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_Format(__pyx_t_2, __pyx_n_u_f); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 206, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __pyx_t_10 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_5) > __pyx_t_10) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_5) : __pyx_t_10;
@@ -8841,9 +8705,9 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
     __pyx_t_12 += 1;
     __Pyx_GIVEREF(__pyx_kp_u__5);
     PyTuple_SET_ITEM(__pyx_t_9, 6, __pyx_kp_u__5);
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_msg, __pyx_n_s_len); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 208, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_msg, __pyx_n_s_len); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 206, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_2 = __Pyx_PyObject_Format(__pyx_t_5, __pyx_n_u_d); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 208, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_Format(__pyx_t_5, __pyx_n_u_d); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 206, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __pyx_t_10 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_2) > __pyx_t_10) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_2) : __pyx_t_10;
@@ -8855,7 +8719,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
     __pyx_t_12 += 2;
     __Pyx_GIVEREF(__pyx_kp_u__6);
     PyTuple_SET_ITEM(__pyx_t_9, 8, __pyx_kp_u__6);
-    __pyx_t_2 = PyUnicode_Join(__pyx_kp_u__7, __pyx_v_cmds); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 208, __pyx_L1_error)
+    __pyx_t_2 = PyUnicode_Join(__pyx_kp_u__7, __pyx_v_cmds); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 206, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __pyx_t_10 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_2) > __pyx_t_10) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_2) : __pyx_t_10;
     __pyx_t_12 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_2);
@@ -8863,20 +8727,20 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
     PyTuple_SET_ITEM(__pyx_t_9, 9, __pyx_t_2);
     __pyx_t_2 = 0;
 
-    /* "serialhdl.pyx":207
+    /* "serialhdl.pyx":205
  *             msg = sdata[i]
  *             cmds = self.msgparser.dump(msg.msg[0:msg.len])
  *             out.append("Sent %d %f %f %d: %s" % (             # <<<<<<<<<<<<<<
  *                 i, msg.receive_time, msg.sent_time, msg.len, ', '.join(cmds)))
  *         out.append("Dumping receive queue %d messages" % (rcount,))
  */
-    __pyx_t_2 = __Pyx_PyUnicode_Join(__pyx_t_9, 10, __pyx_t_12, __pyx_t_10); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 207, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyUnicode_Join(__pyx_t_9, 10, __pyx_t_12, __pyx_t_10); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 205, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-    __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_out, __pyx_t_2); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 207, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_out, __pyx_t_2); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 205, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-    /* "serialhdl.pyx":204
+    /* "serialhdl.pyx":202
  *             self.serialqueue, 0, rdata, len(rdata))
  *         out.append("Dumping send queue %d messages" % (scount,))
  *         for i in range(scount):             # <<<<<<<<<<<<<<
@@ -8886,14 +8750,14 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":209
+  /* "serialhdl.pyx":207
  *             out.append("Sent %d %f %f %d: %s" % (
  *                 i, msg.receive_time, msg.sent_time, msg.len, ', '.join(cmds)))
  *         out.append("Dumping receive queue %d messages" % (rcount,))             # <<<<<<<<<<<<<<
  *         for i in range(rcount):
  *             msg = rdata[i]
  */
-  __pyx_t_1 = PyTuple_New(3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 209, __pyx_L1_error)
+  __pyx_t_1 = PyTuple_New(3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 207, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_7 = 0;
   __pyx_t_10 = 127;
@@ -8901,7 +8765,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
   __pyx_t_7 += 22;
   __Pyx_GIVEREF(__pyx_kp_u_Dumping_receive_queue);
   PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_kp_u_Dumping_receive_queue);
-  __pyx_t_2 = __Pyx_PyObject_Format(__pyx_v_rcount, __pyx_n_u_d); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 209, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_Format(__pyx_v_rcount, __pyx_n_u_d); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 207, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_10 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_2) > __pyx_t_10) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_2) : __pyx_t_10;
   __pyx_t_7 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_2);
@@ -8912,28 +8776,28 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
   __pyx_t_7 += 9;
   __Pyx_GIVEREF(__pyx_kp_u_messages);
   PyTuple_SET_ITEM(__pyx_t_1, 2, __pyx_kp_u_messages);
-  __pyx_t_2 = __Pyx_PyUnicode_Join(__pyx_t_1, 3, __pyx_t_7, __pyx_t_10); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 209, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyUnicode_Join(__pyx_t_1, 3, __pyx_t_7, __pyx_t_10); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 207, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_out, __pyx_t_2); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 209, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_out, __pyx_t_2); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 207, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":210
+  /* "serialhdl.pyx":208
  *                 i, msg.receive_time, msg.sent_time, msg.len, ', '.join(cmds)))
  *         out.append("Dumping receive queue %d messages" % (rcount,))
  *         for i in range(rcount):             # <<<<<<<<<<<<<<
  *             msg = rdata[i]
  *             cmds = self.msgparser.dump(msg.msg[0:msg.len])
  */
-  __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_builtin_range, __pyx_v_rcount); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 210, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_builtin_range, __pyx_v_rcount); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 208, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   if (likely(PyList_CheckExact(__pyx_t_2)) || PyTuple_CheckExact(__pyx_t_2)) {
     __pyx_t_1 = __pyx_t_2; __Pyx_INCREF(__pyx_t_1); __pyx_t_7 = 0;
     __pyx_t_11 = NULL;
   } else {
-    __pyx_t_7 = -1; __pyx_t_1 = PyObject_GetIter(__pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 210, __pyx_L1_error)
+    __pyx_t_7 = -1; __pyx_t_1 = PyObject_GetIter(__pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 208, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_11 = Py_TYPE(__pyx_t_1)->tp_iternext; if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 210, __pyx_L1_error)
+    __pyx_t_11 = Py_TYPE(__pyx_t_1)->tp_iternext; if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 208, __pyx_L1_error)
   }
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   for (;;) {
@@ -8941,17 +8805,17 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
       if (likely(PyList_CheckExact(__pyx_t_1))) {
         if (__pyx_t_7 >= PyList_GET_SIZE(__pyx_t_1)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_2 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_7); __Pyx_INCREF(__pyx_t_2); __pyx_t_7++; if (unlikely(0 < 0)) __PYX_ERR(0, 210, __pyx_L1_error)
+        __pyx_t_2 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_7); __Pyx_INCREF(__pyx_t_2); __pyx_t_7++; if (unlikely(0 < 0)) __PYX_ERR(0, 208, __pyx_L1_error)
         #else
-        __pyx_t_2 = PySequence_ITEM(__pyx_t_1, __pyx_t_7); __pyx_t_7++; if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 210, __pyx_L1_error)
+        __pyx_t_2 = PySequence_ITEM(__pyx_t_1, __pyx_t_7); __pyx_t_7++; if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 208, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_2);
         #endif
       } else {
         if (__pyx_t_7 >= PyTuple_GET_SIZE(__pyx_t_1)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_2 = PyTuple_GET_ITEM(__pyx_t_1, __pyx_t_7); __Pyx_INCREF(__pyx_t_2); __pyx_t_7++; if (unlikely(0 < 0)) __PYX_ERR(0, 210, __pyx_L1_error)
+        __pyx_t_2 = PyTuple_GET_ITEM(__pyx_t_1, __pyx_t_7); __Pyx_INCREF(__pyx_t_2); __pyx_t_7++; if (unlikely(0 < 0)) __PYX_ERR(0, 208, __pyx_L1_error)
         #else
-        __pyx_t_2 = PySequence_ITEM(__pyx_t_1, __pyx_t_7); __pyx_t_7++; if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 210, __pyx_L1_error)
+        __pyx_t_2 = PySequence_ITEM(__pyx_t_1, __pyx_t_7); __pyx_t_7++; if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 208, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_2);
         #endif
       }
@@ -8961,7 +8825,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
         PyObject* exc_type = PyErr_Occurred();
         if (exc_type) {
           if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-          else __PYX_ERR(0, 210, __pyx_L1_error)
+          else __PYX_ERR(0, 208, __pyx_L1_error)
         }
         break;
       }
@@ -8970,35 +8834,35 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
     __Pyx_XDECREF_SET(__pyx_v_i, __pyx_t_2);
     __pyx_t_2 = 0;
 
-    /* "serialhdl.pyx":211
+    /* "serialhdl.pyx":209
  *         out.append("Dumping receive queue %d messages" % (rcount,))
  *         for i in range(rcount):
  *             msg = rdata[i]             # <<<<<<<<<<<<<<
  *             cmds = self.msgparser.dump(msg.msg[0:msg.len])
  *             out.append("Receive: %d %f %f %d: %s" % (
  */
-    __pyx_t_2 = __Pyx_PyObject_GetItem(__pyx_v_rdata, __pyx_v_i); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 211, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_GetItem(__pyx_v_rdata, __pyx_v_i); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 209, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_XDECREF_SET(__pyx_v_msg, __pyx_t_2);
     __pyx_t_2 = 0;
 
-    /* "serialhdl.pyx":212
+    /* "serialhdl.pyx":210
  *         for i in range(rcount):
  *             msg = rdata[i]
  *             cmds = self.msgparser.dump(msg.msg[0:msg.len])             # <<<<<<<<<<<<<<
  *             out.append("Receive: %d %f %f %d: %s" % (
  *                 i, msg.receive_time, msg.sent_time, msg.len, ', '.join(cmds)))
  */
-    __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_msgparser); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 212, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_msgparser); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 210, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_dump); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 212, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_dump); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 210, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-    __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_msg, __pyx_n_s_msg); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 212, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_msg, __pyx_n_s_msg); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 210, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
-    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_msg, __pyx_n_s_len); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 212, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_msg, __pyx_n_s_len); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 210, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_4 = __Pyx_PyObject_GetSlice(__pyx_t_9, 0, 0, NULL, &__pyx_t_3, NULL, 1, 0, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 212, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetSlice(__pyx_t_9, 0, 0, NULL, &__pyx_t_3, NULL, 1, 0, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 210, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -9015,20 +8879,20 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
     __pyx_t_2 = (__pyx_t_3) ? __Pyx_PyObject_Call2Args(__pyx_t_5, __pyx_t_3, __pyx_t_4) : __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_t_4);
     __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 212, __pyx_L1_error)
+    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 210, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __Pyx_XDECREF_SET(__pyx_v_cmds, __pyx_t_2);
     __pyx_t_2 = 0;
 
-    /* "serialhdl.pyx":213
+    /* "serialhdl.pyx":211
  *             msg = rdata[i]
  *             cmds = self.msgparser.dump(msg.msg[0:msg.len])
  *             out.append("Receive: %d %f %f %d: %s" % (             # <<<<<<<<<<<<<<
  *                 i, msg.receive_time, msg.sent_time, msg.len, ', '.join(cmds)))
  *         return '\n'.join(out)
  */
-    __pyx_t_2 = PyTuple_New(10); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 213, __pyx_L1_error)
+    __pyx_t_2 = PyTuple_New(10); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 211, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __pyx_t_12 = 0;
     __pyx_t_10 = 127;
@@ -9037,14 +8901,14 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
     __Pyx_GIVEREF(__pyx_kp_u_Receive);
     PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_kp_u_Receive);
 
-    /* "serialhdl.pyx":214
+    /* "serialhdl.pyx":212
  *             cmds = self.msgparser.dump(msg.msg[0:msg.len])
  *             out.append("Receive: %d %f %f %d: %s" % (
  *                 i, msg.receive_time, msg.sent_time, msg.len, ', '.join(cmds)))             # <<<<<<<<<<<<<<
  *         return '\n'.join(out)
  *     # Default message handlers
  */
-    __pyx_t_5 = __Pyx_PyObject_Format(__pyx_v_i, __pyx_n_u_d); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 214, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_Format(__pyx_v_i, __pyx_n_u_d); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 212, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __pyx_t_10 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_5) > __pyx_t_10) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_5) : __pyx_t_10;
     __pyx_t_12 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_5);
@@ -9055,9 +8919,9 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
     __pyx_t_12 += 1;
     __Pyx_GIVEREF(__pyx_kp_u__5);
     PyTuple_SET_ITEM(__pyx_t_2, 2, __pyx_kp_u__5);
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_msg, __pyx_n_s_receive_time_2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 214, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_msg, __pyx_n_s_receive_time_2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 212, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_4 = __Pyx_PyObject_Format(__pyx_t_5, __pyx_n_u_f); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 214, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_Format(__pyx_t_5, __pyx_n_u_f); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 212, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __pyx_t_10 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_4) > __pyx_t_10) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_4) : __pyx_t_10;
@@ -9069,9 +8933,9 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
     __pyx_t_12 += 1;
     __Pyx_GIVEREF(__pyx_kp_u__5);
     PyTuple_SET_ITEM(__pyx_t_2, 4, __pyx_kp_u__5);
-    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_msg, __pyx_n_s_sent_time_2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 214, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_msg, __pyx_n_s_sent_time_2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 212, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_5 = __Pyx_PyObject_Format(__pyx_t_4, __pyx_n_u_f); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 214, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_Format(__pyx_t_4, __pyx_n_u_f); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 212, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __pyx_t_10 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_5) > __pyx_t_10) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_5) : __pyx_t_10;
@@ -9083,9 +8947,9 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
     __pyx_t_12 += 1;
     __Pyx_GIVEREF(__pyx_kp_u__5);
     PyTuple_SET_ITEM(__pyx_t_2, 6, __pyx_kp_u__5);
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_msg, __pyx_n_s_len); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 214, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_msg, __pyx_n_s_len); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 212, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_4 = __Pyx_PyObject_Format(__pyx_t_5, __pyx_n_u_d); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 214, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_Format(__pyx_t_5, __pyx_n_u_d); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 212, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __pyx_t_10 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_4) > __pyx_t_10) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_4) : __pyx_t_10;
@@ -9097,7 +8961,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
     __pyx_t_12 += 2;
     __Pyx_GIVEREF(__pyx_kp_u__6);
     PyTuple_SET_ITEM(__pyx_t_2, 8, __pyx_kp_u__6);
-    __pyx_t_4 = PyUnicode_Join(__pyx_kp_u__7, __pyx_v_cmds); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 214, __pyx_L1_error)
+    __pyx_t_4 = PyUnicode_Join(__pyx_kp_u__7, __pyx_v_cmds); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 212, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __pyx_t_10 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_4) > __pyx_t_10) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_4) : __pyx_t_10;
     __pyx_t_12 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_4);
@@ -9105,20 +8969,20 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
     PyTuple_SET_ITEM(__pyx_t_2, 9, __pyx_t_4);
     __pyx_t_4 = 0;
 
-    /* "serialhdl.pyx":213
+    /* "serialhdl.pyx":211
  *             msg = rdata[i]
  *             cmds = self.msgparser.dump(msg.msg[0:msg.len])
  *             out.append("Receive: %d %f %f %d: %s" % (             # <<<<<<<<<<<<<<
  *                 i, msg.receive_time, msg.sent_time, msg.len, ', '.join(cmds)))
  *         return '\n'.join(out)
  */
-    __pyx_t_4 = __Pyx_PyUnicode_Join(__pyx_t_2, 10, __pyx_t_12, __pyx_t_10); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 213, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyUnicode_Join(__pyx_t_2, 10, __pyx_t_12, __pyx_t_10); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 211, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_out, __pyx_t_4); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 213, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_out, __pyx_t_4); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 211, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-    /* "serialhdl.pyx":210
+    /* "serialhdl.pyx":208
  *                 i, msg.receive_time, msg.sent_time, msg.len, ', '.join(cmds)))
  *         out.append("Dumping receive queue %d messages" % (rcount,))
  *         for i in range(rcount):             # <<<<<<<<<<<<<<
@@ -9128,7 +8992,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":215
+  /* "serialhdl.pyx":213
  *             out.append("Receive: %d %f %f %d: %s" % (
  *                 i, msg.receive_time, msg.sent_time, msg.len, ', '.join(cmds)))
  *         return '\n'.join(out)             # <<<<<<<<<<<<<<
@@ -9136,13 +9000,13 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
  *     def _handle_unknown_init(self, params):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyUnicode_Join(__pyx_kp_u__8, __pyx_v_out); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 215, __pyx_L1_error)
+  __pyx_t_1 = PyUnicode_Join(__pyx_kp_u__8, __pyx_v_out); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 213, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "serialhdl.pyx":193
+  /* "serialhdl.pyx":191
  *                                 self.ffi_lib.serialqueue_free_commandqueue)
  *     # Dumping debug lists
  *     def dump_debug(self):             # <<<<<<<<<<<<<<
@@ -9174,7 +9038,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_34dump_debug(CYTHON_UNUSED P
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":217
+/* "serialhdl.pyx":215
  *         return '\n'.join(out)
  *     # Default message handlers
  *     def _handle_unknown_init(self, params):             # <<<<<<<<<<<<<<
@@ -9214,11 +9078,11 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_37_handle_unknown_init(PyObj
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_params)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("_handle_unknown_init", 1, 2, 2, 1); __PYX_ERR(0, 217, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("_handle_unknown_init", 1, 2, 2, 1); __PYX_ERR(0, 215, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "_handle_unknown_init") < 0)) __PYX_ERR(0, 217, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "_handle_unknown_init") < 0)) __PYX_ERR(0, 215, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -9231,7 +9095,7 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_37_handle_unknown_init(PyObj
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("_handle_unknown_init", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 217, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("_handle_unknown_init", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 215, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("serialhdl.SerialReader._handle_unknown_init", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -9257,33 +9121,33 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_36_handle_unknown_init(CYTHO
   PyObject *__pyx_t_8 = NULL;
   __Pyx_RefNannySetupContext("_handle_unknown_init", 0);
 
-  /* "serialhdl.pyx":218
+  /* "serialhdl.pyx":216
  *     # Default message handlers
  *     def _handle_unknown_init(self, params):
  *         logging.debug("Unknown message %d (len %d) while identifying",             # <<<<<<<<<<<<<<
  *                       params['#msgid'], len(params['#msg']))
  *     def handle_unknown(self, params):
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_logging); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 218, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_logging); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 216, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_debug); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 218, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_debug); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 216, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":219
+  /* "serialhdl.pyx":217
  *     def _handle_unknown_init(self, params):
  *         logging.debug("Unknown message %d (len %d) while identifying",
  *                       params['#msgid'], len(params['#msg']))             # <<<<<<<<<<<<<<
  *     def handle_unknown(self, params):
  *         logging.warn("Unknown message type %d: %s",
  */
-  __pyx_t_2 = __Pyx_PyObject_Dict_GetItem(__pyx_v_params, __pyx_kp_u_msgid); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 219, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_Dict_GetItem(__pyx_v_params, __pyx_kp_u_msgid); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 217, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_params, __pyx_kp_u_msg_2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 219, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_params, __pyx_kp_u_msg_2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 217, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_5 = PyObject_Length(__pyx_t_4); if (unlikely(__pyx_t_5 == ((Py_ssize_t)-1))) __PYX_ERR(0, 219, __pyx_L1_error)
+  __pyx_t_5 = PyObject_Length(__pyx_t_4); if (unlikely(__pyx_t_5 == ((Py_ssize_t)-1))) __PYX_ERR(0, 217, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = PyInt_FromSsize_t(__pyx_t_5); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 219, __pyx_L1_error)
+  __pyx_t_4 = PyInt_FromSsize_t(__pyx_t_5); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 217, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __pyx_t_6 = NULL;
   __pyx_t_7 = 0;
@@ -9300,7 +9164,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_36_handle_unknown_init(CYTHO
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[4] = {__pyx_t_6, __pyx_kp_u_Unknown_message_d_len_d_while_id, __pyx_t_2, __pyx_t_4};
-    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_7, 3+__pyx_t_7); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 218, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_7, 3+__pyx_t_7); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 216, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -9310,7 +9174,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_36_handle_unknown_init(CYTHO
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[4] = {__pyx_t_6, __pyx_kp_u_Unknown_message_d_len_d_while_id, __pyx_t_2, __pyx_t_4};
-    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_7, 3+__pyx_t_7); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 218, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_7, 3+__pyx_t_7); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 216, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -9318,7 +9182,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_36_handle_unknown_init(CYTHO
   } else
   #endif
   {
-    __pyx_t_8 = PyTuple_New(3+__pyx_t_7); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 218, __pyx_L1_error)
+    __pyx_t_8 = PyTuple_New(3+__pyx_t_7); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 216, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     if (__pyx_t_6) {
       __Pyx_GIVEREF(__pyx_t_6); PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_6); __pyx_t_6 = NULL;
@@ -9332,14 +9196,14 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_36_handle_unknown_init(CYTHO
     PyTuple_SET_ITEM(__pyx_t_8, 2+__pyx_t_7, __pyx_t_4);
     __pyx_t_2 = 0;
     __pyx_t_4 = 0;
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_8, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 218, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_8, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 216, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   }
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":217
+  /* "serialhdl.pyx":215
  *         return '\n'.join(out)
  *     # Default message handlers
  *     def _handle_unknown_init(self, params):             # <<<<<<<<<<<<<<
@@ -9365,7 +9229,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_36_handle_unknown_init(CYTHO
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":220
+/* "serialhdl.pyx":218
  *         logging.debug("Unknown message %d (len %d) while identifying",
  *                       params['#msgid'], len(params['#msg']))
  *     def handle_unknown(self, params):             # <<<<<<<<<<<<<<
@@ -9405,11 +9269,11 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_39handle_unknown(PyObject *_
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_params)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("handle_unknown", 1, 2, 2, 1); __PYX_ERR(0, 220, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("handle_unknown", 1, 2, 2, 1); __PYX_ERR(0, 218, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "handle_unknown") < 0)) __PYX_ERR(0, 220, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "handle_unknown") < 0)) __PYX_ERR(0, 218, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -9422,7 +9286,7 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_39handle_unknown(PyObject *_
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("handle_unknown", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 220, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("handle_unknown", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 218, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("serialhdl.SerialReader.handle_unknown", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -9447,31 +9311,31 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_38handle_unknown(CYTHON_UNUS
   PyObject *__pyx_t_7 = NULL;
   __Pyx_RefNannySetupContext("handle_unknown", 0);
 
-  /* "serialhdl.pyx":221
+  /* "serialhdl.pyx":219
  *                       params['#msgid'], len(params['#msg']))
  *     def handle_unknown(self, params):
  *         logging.warn("Unknown message type %d: %s",             # <<<<<<<<<<<<<<
  *                      params['#msgid'], repr(params['#msg']))
  *     def handle_output(self, params):
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_logging); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 221, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_logging); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 219, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_warn); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 221, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_warn); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 219, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":222
+  /* "serialhdl.pyx":220
  *     def handle_unknown(self, params):
  *         logging.warn("Unknown message type %d: %s",
  *                      params['#msgid'], repr(params['#msg']))             # <<<<<<<<<<<<<<
  *     def handle_output(self, params):
  *         logging.info("%s: %s", params['#name'], params['#msg'])
  */
-  __pyx_t_2 = __Pyx_PyObject_Dict_GetItem(__pyx_v_params, __pyx_kp_u_msgid); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 222, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_Dict_GetItem(__pyx_v_params, __pyx_kp_u_msgid); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 220, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_params, __pyx_kp_u_msg_2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 222, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_params, __pyx_kp_u_msg_2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 220, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_5 = PyObject_Repr(__pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 222, __pyx_L1_error)
+  __pyx_t_5 = PyObject_Repr(__pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 220, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_t_4 = NULL;
@@ -9489,7 +9353,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_38handle_unknown(CYTHON_UNUS
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[4] = {__pyx_t_4, __pyx_kp_u_Unknown_message_type_d_s, __pyx_t_2, __pyx_t_5};
-    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_6, 3+__pyx_t_6); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 221, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_6, 3+__pyx_t_6); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 219, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -9499,7 +9363,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_38handle_unknown(CYTHON_UNUS
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[4] = {__pyx_t_4, __pyx_kp_u_Unknown_message_type_d_s, __pyx_t_2, __pyx_t_5};
-    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_6, 3+__pyx_t_6); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 221, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_6, 3+__pyx_t_6); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 219, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -9507,7 +9371,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_38handle_unknown(CYTHON_UNUS
   } else
   #endif
   {
-    __pyx_t_7 = PyTuple_New(3+__pyx_t_6); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 221, __pyx_L1_error)
+    __pyx_t_7 = PyTuple_New(3+__pyx_t_6); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 219, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     if (__pyx_t_4) {
       __Pyx_GIVEREF(__pyx_t_4); PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_t_4); __pyx_t_4 = NULL;
@@ -9521,14 +9385,14 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_38handle_unknown(CYTHON_UNUS
     PyTuple_SET_ITEM(__pyx_t_7, 2+__pyx_t_6, __pyx_t_5);
     __pyx_t_2 = 0;
     __pyx_t_5 = 0;
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_7, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 221, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_7, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 219, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   }
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":220
+  /* "serialhdl.pyx":218
  *         logging.debug("Unknown message %d (len %d) while identifying",
  *                       params['#msgid'], len(params['#msg']))
  *     def handle_unknown(self, params):             # <<<<<<<<<<<<<<
@@ -9554,7 +9418,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_38handle_unknown(CYTHON_UNUS
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":223
+/* "serialhdl.pyx":221
  *         logging.warn("Unknown message type %d: %s",
  *                      params['#msgid'], repr(params['#msg']))
  *     def handle_output(self, params):             # <<<<<<<<<<<<<<
@@ -9594,11 +9458,11 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_41handle_output(PyObject *__
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_params)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("handle_output", 1, 2, 2, 1); __PYX_ERR(0, 223, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("handle_output", 1, 2, 2, 1); __PYX_ERR(0, 221, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "handle_output") < 0)) __PYX_ERR(0, 223, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "handle_output") < 0)) __PYX_ERR(0, 221, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -9611,7 +9475,7 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_41handle_output(PyObject *__
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("handle_output", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 223, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("handle_output", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 221, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("serialhdl.SerialReader.handle_output", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -9636,21 +9500,21 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_40handle_output(CYTHON_UNUSE
   PyObject *__pyx_t_7 = NULL;
   __Pyx_RefNannySetupContext("handle_output", 0);
 
-  /* "serialhdl.pyx":224
+  /* "serialhdl.pyx":222
  *                      params['#msgid'], repr(params['#msg']))
  *     def handle_output(self, params):
  *         logging.info("%s: %s", params['#name'], params['#msg'])             # <<<<<<<<<<<<<<
  *     def handle_default(self, params):
  *         logging.warn("got %s", params)
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_logging); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 224, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_logging); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 222, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_info); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 224, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_info); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 222, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = __Pyx_PyObject_Dict_GetItem(__pyx_v_params, __pyx_kp_u_name); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 224, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_Dict_GetItem(__pyx_v_params, __pyx_kp_u_name); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 222, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_params, __pyx_kp_u_msg_2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 224, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_v_params, __pyx_kp_u_msg_2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 222, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __pyx_t_5 = NULL;
   __pyx_t_6 = 0;
@@ -9667,7 +9531,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_40handle_output(CYTHON_UNUSE
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[4] = {__pyx_t_5, __pyx_kp_u_s_s, __pyx_t_2, __pyx_t_4};
-    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_6, 3+__pyx_t_6); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 224, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_6, 3+__pyx_t_6); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 222, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -9677,7 +9541,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_40handle_output(CYTHON_UNUSE
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[4] = {__pyx_t_5, __pyx_kp_u_s_s, __pyx_t_2, __pyx_t_4};
-    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_6, 3+__pyx_t_6); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 224, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_6, 3+__pyx_t_6); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 222, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -9685,7 +9549,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_40handle_output(CYTHON_UNUSE
   } else
   #endif
   {
-    __pyx_t_7 = PyTuple_New(3+__pyx_t_6); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 224, __pyx_L1_error)
+    __pyx_t_7 = PyTuple_New(3+__pyx_t_6); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 222, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     if (__pyx_t_5) {
       __Pyx_GIVEREF(__pyx_t_5); PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_t_5); __pyx_t_5 = NULL;
@@ -9699,14 +9563,14 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_40handle_output(CYTHON_UNUSE
     PyTuple_SET_ITEM(__pyx_t_7, 2+__pyx_t_6, __pyx_t_4);
     __pyx_t_2 = 0;
     __pyx_t_4 = 0;
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_7, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 224, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_7, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 222, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   }
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":223
+  /* "serialhdl.pyx":221
  *         logging.warn("Unknown message type %d: %s",
  *                      params['#msgid'], repr(params['#msg']))
  *     def handle_output(self, params):             # <<<<<<<<<<<<<<
@@ -9732,7 +9596,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_40handle_output(CYTHON_UNUSE
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":225
+/* "serialhdl.pyx":223
  *     def handle_output(self, params):
  *         logging.info("%s: %s", params['#name'], params['#msg'])
  *     def handle_default(self, params):             # <<<<<<<<<<<<<<
@@ -9772,11 +9636,11 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_43handle_default(PyObject *_
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_params)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("handle_default", 1, 2, 2, 1); __PYX_ERR(0, 225, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("handle_default", 1, 2, 2, 1); __PYX_ERR(0, 223, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "handle_default") < 0)) __PYX_ERR(0, 225, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "handle_default") < 0)) __PYX_ERR(0, 223, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -9789,7 +9653,7 @@ static PyObject *__pyx_pw_9serialhdl_12SerialReader_43handle_default(PyObject *_
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("handle_default", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 225, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("handle_default", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 223, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("serialhdl.SerialReader.handle_default", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -9812,16 +9676,16 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_42handle_default(CYTHON_UNUS
   PyObject *__pyx_t_5 = NULL;
   __Pyx_RefNannySetupContext("handle_default", 0);
 
-  /* "serialhdl.pyx":226
+  /* "serialhdl.pyx":224
  *         logging.info("%s: %s", params['#name'], params['#msg'])
  *     def handle_default(self, params):
  *         logging.warn("got %s", params)             # <<<<<<<<<<<<<<
  *     def __del__(self):
  *         self.disconnect()
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_logging); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 226, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_logging); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 224, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_warn); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 226, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_warn); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 224, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_2 = NULL;
@@ -9839,7 +9703,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_42handle_default(CYTHON_UNUS
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[3] = {__pyx_t_2, __pyx_kp_u_got_s, __pyx_v_params};
-    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_4, 2+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 226, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_4, 2+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 224, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_GOTREF(__pyx_t_1);
   } else
@@ -9847,13 +9711,13 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_42handle_default(CYTHON_UNUS
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[3] = {__pyx_t_2, __pyx_kp_u_got_s, __pyx_v_params};
-    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_4, 2+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 226, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_4, 2+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 224, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_GOTREF(__pyx_t_1);
   } else
   #endif
   {
-    __pyx_t_5 = PyTuple_New(2+__pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 226, __pyx_L1_error)
+    __pyx_t_5 = PyTuple_New(2+__pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 224, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     if (__pyx_t_2) {
       __Pyx_GIVEREF(__pyx_t_2); PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_2); __pyx_t_2 = NULL;
@@ -9864,14 +9728,14 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_42handle_default(CYTHON_UNUS
     __Pyx_INCREF(__pyx_v_params);
     __Pyx_GIVEREF(__pyx_v_params);
     PyTuple_SET_ITEM(__pyx_t_5, 1+__pyx_t_4, __pyx_v_params);
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_5, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 226, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_5, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 224, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   }
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":225
+  /* "serialhdl.pyx":223
  *     def handle_output(self, params):
  *         logging.info("%s: %s", params['#name'], params['#msg'])
  *     def handle_default(self, params):             # <<<<<<<<<<<<<<
@@ -9895,7 +9759,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_42handle_default(CYTHON_UNUS
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":227
+/* "serialhdl.pyx":225
  *     def handle_default(self, params):
  *         logging.warn("got %s", params)
  *     def __del__(self):             # <<<<<<<<<<<<<<
@@ -9925,14 +9789,14 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_44__del__(CYTHON_UNUSED PyOb
   PyObject *__pyx_t_3 = NULL;
   __Pyx_RefNannySetupContext("__del__", 0);
 
-  /* "serialhdl.pyx":228
+  /* "serialhdl.pyx":226
  *         logging.warn("got %s", params)
  *     def __del__(self):
  *         self.disconnect()             # <<<<<<<<<<<<<<
  * 
  * # Class to send a query command and return the received response
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_disconnect); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 228, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_disconnect); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 226, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -9946,12 +9810,12 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_44__del__(CYTHON_UNUSED PyOb
   }
   __pyx_t_1 = (__pyx_t_3) ? __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3) : __Pyx_PyObject_CallNoArg(__pyx_t_2);
   __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 228, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 226, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":227
+  /* "serialhdl.pyx":225
  *     def handle_default(self, params):
  *         logging.warn("got %s", params)
  *     def __del__(self):             # <<<<<<<<<<<<<<
@@ -9974,7 +9838,7 @@ static PyObject *__pyx_pf_9serialhdl_12SerialReader_44__del__(CYTHON_UNUSED PyOb
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":232
+/* "serialhdl.pyx":230
  * # Class to send a query command and return the received response
  * class SerialRetryCommand:
  *     def __init__(self, serial, name, oid=None):             # <<<<<<<<<<<<<<
@@ -10021,13 +9885,13 @@ static PyObject *__pyx_pw_9serialhdl_18SerialRetryCommand_1__init__(PyObject *__
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_serial)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__init__", 0, 3, 4, 1); __PYX_ERR(0, 232, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__init__", 0, 3, 4, 1); __PYX_ERR(0, 230, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_name_2)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__init__", 0, 3, 4, 2); __PYX_ERR(0, 232, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__init__", 0, 3, 4, 2); __PYX_ERR(0, 230, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  3:
@@ -10037,7 +9901,7 @@ static PyObject *__pyx_pw_9serialhdl_18SerialRetryCommand_1__init__(PyObject *__
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__init__") < 0)) __PYX_ERR(0, 232, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__init__") < 0)) __PYX_ERR(0, 230, __pyx_L3_error)
       }
     } else {
       switch (PyTuple_GET_SIZE(__pyx_args)) {
@@ -10057,7 +9921,7 @@ static PyObject *__pyx_pw_9serialhdl_18SerialRetryCommand_1__init__(PyObject *__
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("__init__", 0, 3, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 232, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("__init__", 0, 3, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 230, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("serialhdl.SerialRetryCommand.__init__", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -10081,55 +9945,55 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand___init__(CYTHON_UNUSED
   PyObject *__pyx_t_6 = NULL;
   __Pyx_RefNannySetupContext("__init__", 0);
 
-  /* "serialhdl.pyx":233
+  /* "serialhdl.pyx":231
  * class SerialRetryCommand:
  *     def __init__(self, serial, name, oid=None):
  *         self.serial = serial             # <<<<<<<<<<<<<<
  *         self.name = name
  *         self.oid = oid
  */
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_serial, __pyx_v_serial) < 0) __PYX_ERR(0, 233, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_serial, __pyx_v_serial) < 0) __PYX_ERR(0, 231, __pyx_L1_error)
 
-  /* "serialhdl.pyx":234
+  /* "serialhdl.pyx":232
  *     def __init__(self, serial, name, oid=None):
  *         self.serial = serial
  *         self.name = name             # <<<<<<<<<<<<<<
  *         self.oid = oid
  *         self.last_params = None
  */
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_name_2, __pyx_v_name) < 0) __PYX_ERR(0, 234, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_name_2, __pyx_v_name) < 0) __PYX_ERR(0, 232, __pyx_L1_error)
 
-  /* "serialhdl.pyx":235
+  /* "serialhdl.pyx":233
  *         self.serial = serial
  *         self.name = name
  *         self.oid = oid             # <<<<<<<<<<<<<<
  *         self.last_params = None
  *         self.serial.register_response(self.handle_callback, name, oid)
  */
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_oid, __pyx_v_oid) < 0) __PYX_ERR(0, 235, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_oid, __pyx_v_oid) < 0) __PYX_ERR(0, 233, __pyx_L1_error)
 
-  /* "serialhdl.pyx":236
+  /* "serialhdl.pyx":234
  *         self.name = name
  *         self.oid = oid
  *         self.last_params = None             # <<<<<<<<<<<<<<
  *         self.serial.register_response(self.handle_callback, name, oid)
  *     def handle_callback(self, params):
  */
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_last_params, Py_None) < 0) __PYX_ERR(0, 236, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_last_params, Py_None) < 0) __PYX_ERR(0, 234, __pyx_L1_error)
 
-  /* "serialhdl.pyx":237
+  /* "serialhdl.pyx":235
  *         self.oid = oid
  *         self.last_params = None
  *         self.serial.register_response(self.handle_callback, name, oid)             # <<<<<<<<<<<<<<
  *     def handle_callback(self, params):
  *         self.last_params = params
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serial); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 237, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serial); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 235, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_register_response); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 237, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_register_response); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 235, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_handle_callback); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 237, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_handle_callback); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 235, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_4 = NULL;
   __pyx_t_5 = 0;
@@ -10146,7 +10010,7 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand___init__(CYTHON_UNUSED
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[4] = {__pyx_t_4, __pyx_t_2, __pyx_v_name, __pyx_v_oid};
-    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_5, 3+__pyx_t_5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 237, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_5, 3+__pyx_t_5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 235, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -10155,14 +10019,14 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand___init__(CYTHON_UNUSED
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[4] = {__pyx_t_4, __pyx_t_2, __pyx_v_name, __pyx_v_oid};
-    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_5, 3+__pyx_t_5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 237, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_5, 3+__pyx_t_5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 235, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   } else
   #endif
   {
-    __pyx_t_6 = PyTuple_New(3+__pyx_t_5); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 237, __pyx_L1_error)
+    __pyx_t_6 = PyTuple_New(3+__pyx_t_5); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 235, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     if (__pyx_t_4) {
       __Pyx_GIVEREF(__pyx_t_4); PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_t_4); __pyx_t_4 = NULL;
@@ -10176,14 +10040,14 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand___init__(CYTHON_UNUSED
     __Pyx_GIVEREF(__pyx_v_oid);
     PyTuple_SET_ITEM(__pyx_t_6, 2+__pyx_t_5, __pyx_v_oid);
     __pyx_t_2 = 0;
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_6, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 237, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_6, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 235, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   }
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":232
+  /* "serialhdl.pyx":230
  * # Class to send a query command and return the received response
  * class SerialRetryCommand:
  *     def __init__(self, serial, name, oid=None):             # <<<<<<<<<<<<<<
@@ -10208,7 +10072,7 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand___init__(CYTHON_UNUSED
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":238
+/* "serialhdl.pyx":236
  *         self.last_params = None
  *         self.serial.register_response(self.handle_callback, name, oid)
  *     def handle_callback(self, params):             # <<<<<<<<<<<<<<
@@ -10248,11 +10112,11 @@ static PyObject *__pyx_pw_9serialhdl_18SerialRetryCommand_3handle_callback(PyObj
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_params)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("handle_callback", 1, 2, 2, 1); __PYX_ERR(0, 238, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("handle_callback", 1, 2, 2, 1); __PYX_ERR(0, 236, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "handle_callback") < 0)) __PYX_ERR(0, 238, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "handle_callback") < 0)) __PYX_ERR(0, 236, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -10265,7 +10129,7 @@ static PyObject *__pyx_pw_9serialhdl_18SerialRetryCommand_3handle_callback(PyObj
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("handle_callback", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 238, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("handle_callback", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 236, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("serialhdl.SerialRetryCommand.handle_callback", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -10283,16 +10147,16 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_2handle_callback(CYTHO
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("handle_callback", 0);
 
-  /* "serialhdl.pyx":239
+  /* "serialhdl.pyx":237
  *         self.serial.register_response(self.handle_callback, name, oid)
  *     def handle_callback(self, params):
  *         self.last_params = params             # <<<<<<<<<<<<<<
  *     def get_response(self, cmd, cmd_queue, minclock=0):
  *         retries = 5
  */
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_last_params, __pyx_v_params) < 0) __PYX_ERR(0, 239, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_last_params, __pyx_v_params) < 0) __PYX_ERR(0, 237, __pyx_L1_error)
 
-  /* "serialhdl.pyx":238
+  /* "serialhdl.pyx":236
  *         self.last_params = None
  *         self.serial.register_response(self.handle_callback, name, oid)
  *     def handle_callback(self, params):             # <<<<<<<<<<<<<<
@@ -10312,7 +10176,7 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_2handle_callback(CYTHO
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":240
+/* "serialhdl.pyx":238
  *     def handle_callback(self, params):
  *         self.last_params = params
  *     def get_response(self, cmd, cmd_queue, minclock=0):             # <<<<<<<<<<<<<<
@@ -10359,13 +10223,13 @@ static PyObject *__pyx_pw_9serialhdl_18SerialRetryCommand_5get_response(PyObject
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_cmd)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("get_response", 0, 3, 4, 1); __PYX_ERR(0, 240, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("get_response", 0, 3, 4, 1); __PYX_ERR(0, 238, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_cmd_queue)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("get_response", 0, 3, 4, 2); __PYX_ERR(0, 240, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("get_response", 0, 3, 4, 2); __PYX_ERR(0, 238, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  3:
@@ -10375,7 +10239,7 @@ static PyObject *__pyx_pw_9serialhdl_18SerialRetryCommand_5get_response(PyObject
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "get_response") < 0)) __PYX_ERR(0, 240, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "get_response") < 0)) __PYX_ERR(0, 238, __pyx_L3_error)
       }
     } else {
       switch (PyTuple_GET_SIZE(__pyx_args)) {
@@ -10395,7 +10259,7 @@ static PyObject *__pyx_pw_9serialhdl_18SerialRetryCommand_5get_response(PyObject
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("get_response", 0, 3, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 240, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("get_response", 0, 3, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 238, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("serialhdl.SerialRetryCommand.get_response", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -10428,7 +10292,7 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
   Py_UCS4 __pyx_t_11;
   __Pyx_RefNannySetupContext("get_response", 0);
 
-  /* "serialhdl.pyx":241
+  /* "serialhdl.pyx":239
  *         self.last_params = params
  *     def get_response(self, cmd, cmd_queue, minclock=0):
  *         retries = 5             # <<<<<<<<<<<<<<
@@ -10438,7 +10302,7 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
   __Pyx_INCREF(__pyx_int_5);
   __pyx_v_retries = __pyx_int_5;
 
-  /* "serialhdl.pyx":242
+  /* "serialhdl.pyx":240
  *     def get_response(self, cmd, cmd_queue, minclock=0):
  *         retries = 5
  *         retry_delay = .010             # <<<<<<<<<<<<<<
@@ -10447,7 +10311,7 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
  */
   __pyx_v_retry_delay = .010;
 
-  /* "serialhdl.pyx":243
+  /* "serialhdl.pyx":241
  *         retries = 5
  *         retry_delay = .010
  *         while 1:             # <<<<<<<<<<<<<<
@@ -10456,16 +10320,16 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
  */
   while (1) {
 
-    /* "serialhdl.pyx":244
+    /* "serialhdl.pyx":242
  *         retry_delay = .010
  *         while 1:
  *             self.serial.raw_send_wait_ack(cmd, minclock, minclock, cmd_queue)             # <<<<<<<<<<<<<<
  *             params = self.last_params
  *             if params is not None:
  */
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serial); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 244, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serial); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 242, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_raw_send_wait_ack); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 244, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_raw_send_wait_ack); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 242, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __pyx_t_2 = NULL;
@@ -10483,7 +10347,7 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
     #if CYTHON_FAST_PYCALL
     if (PyFunction_Check(__pyx_t_3)) {
       PyObject *__pyx_temp[5] = {__pyx_t_2, __pyx_v_cmd, __pyx_v_minclock, __pyx_v_minclock, __pyx_v_cmd_queue};
-      __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_4, 4+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 244, __pyx_L1_error)
+      __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_4, 4+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 242, __pyx_L1_error)
       __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
       __Pyx_GOTREF(__pyx_t_1);
     } else
@@ -10491,13 +10355,13 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
     #if CYTHON_FAST_PYCCALL
     if (__Pyx_PyFastCFunction_Check(__pyx_t_3)) {
       PyObject *__pyx_temp[5] = {__pyx_t_2, __pyx_v_cmd, __pyx_v_minclock, __pyx_v_minclock, __pyx_v_cmd_queue};
-      __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_4, 4+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 244, __pyx_L1_error)
+      __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_4, 4+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 242, __pyx_L1_error)
       __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
       __Pyx_GOTREF(__pyx_t_1);
     } else
     #endif
     {
-      __pyx_t_5 = PyTuple_New(4+__pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 244, __pyx_L1_error)
+      __pyx_t_5 = PyTuple_New(4+__pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 242, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_5);
       if (__pyx_t_2) {
         __Pyx_GIVEREF(__pyx_t_2); PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_2); __pyx_t_2 = NULL;
@@ -10514,26 +10378,26 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
       __Pyx_INCREF(__pyx_v_cmd_queue);
       __Pyx_GIVEREF(__pyx_v_cmd_queue);
       PyTuple_SET_ITEM(__pyx_t_5, 3+__pyx_t_4, __pyx_v_cmd_queue);
-      __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_5, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 244, __pyx_L1_error)
+      __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_5, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 242, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     }
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-    /* "serialhdl.pyx":245
+    /* "serialhdl.pyx":243
  *         while 1:
  *             self.serial.raw_send_wait_ack(cmd, minclock, minclock, cmd_queue)
  *             params = self.last_params             # <<<<<<<<<<<<<<
  *             if params is not None:
  *                 self.serial.register_response(None, self.name, self.oid)
  */
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_last_params); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 245, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_last_params); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 243, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_XDECREF_SET(__pyx_v_params, __pyx_t_1);
     __pyx_t_1 = 0;
 
-    /* "serialhdl.pyx":246
+    /* "serialhdl.pyx":244
  *             self.serial.raw_send_wait_ack(cmd, minclock, minclock, cmd_queue)
  *             params = self.last_params
  *             if params is not None:             # <<<<<<<<<<<<<<
@@ -10544,21 +10408,21 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
     __pyx_t_7 = (__pyx_t_6 != 0);
     if (__pyx_t_7) {
 
-      /* "serialhdl.pyx":247
+      /* "serialhdl.pyx":245
  *             params = self.last_params
  *             if params is not None:
  *                 self.serial.register_response(None, self.name, self.oid)             # <<<<<<<<<<<<<<
  *                 return params
  *             if retries <= 0:
  */
-      __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serial); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 247, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serial); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 245, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_3);
-      __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_register_response); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 247, __pyx_L1_error)
+      __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_register_response); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 245, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_5);
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-      __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_name_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 247, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_name_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 245, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_3);
-      __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_oid); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 247, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_oid); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 245, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
       __pyx_t_8 = NULL;
       __pyx_t_4 = 0;
@@ -10575,7 +10439,7 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
       #if CYTHON_FAST_PYCALL
       if (PyFunction_Check(__pyx_t_5)) {
         PyObject *__pyx_temp[4] = {__pyx_t_8, Py_None, __pyx_t_3, __pyx_t_2};
-        __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_4, 3+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 247, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_4, 3+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 245, __pyx_L1_error)
         __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
         __Pyx_GOTREF(__pyx_t_1);
         __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -10585,7 +10449,7 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
       #if CYTHON_FAST_PYCCALL
       if (__Pyx_PyFastCFunction_Check(__pyx_t_5)) {
         PyObject *__pyx_temp[4] = {__pyx_t_8, Py_None, __pyx_t_3, __pyx_t_2};
-        __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_4, 3+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 247, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_4, 3+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 245, __pyx_L1_error)
         __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
         __Pyx_GOTREF(__pyx_t_1);
         __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -10593,7 +10457,7 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
       } else
       #endif
       {
-        __pyx_t_9 = PyTuple_New(3+__pyx_t_4); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 247, __pyx_L1_error)
+        __pyx_t_9 = PyTuple_New(3+__pyx_t_4); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 245, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
         if (__pyx_t_8) {
           __Pyx_GIVEREF(__pyx_t_8); PyTuple_SET_ITEM(__pyx_t_9, 0, __pyx_t_8); __pyx_t_8 = NULL;
@@ -10607,14 +10471,14 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
         PyTuple_SET_ITEM(__pyx_t_9, 2+__pyx_t_4, __pyx_t_2);
         __pyx_t_3 = 0;
         __pyx_t_2 = 0;
-        __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_9, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 247, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_9, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 245, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
       }
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-      /* "serialhdl.pyx":248
+      /* "serialhdl.pyx":246
  *             if params is not None:
  *                 self.serial.register_response(None, self.name, self.oid)
  *                 return params             # <<<<<<<<<<<<<<
@@ -10626,7 +10490,7 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
       __pyx_r = __pyx_v_params;
       goto __pyx_L0;
 
-      /* "serialhdl.pyx":246
+      /* "serialhdl.pyx":244
  *             self.serial.raw_send_wait_ack(cmd, minclock, minclock, cmd_queue)
  *             params = self.last_params
  *             if params is not None:             # <<<<<<<<<<<<<<
@@ -10635,33 +10499,33 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
  */
     }
 
-    /* "serialhdl.pyx":249
+    /* "serialhdl.pyx":247
  *                 self.serial.register_response(None, self.name, self.oid)
  *                 return params
  *             if retries <= 0:             # <<<<<<<<<<<<<<
  *                 self.serial.register_response(None, self.name, self.oid)
  *                 raise error("Unable to obtain '%s' response" % (self.name,))
  */
-    __pyx_t_1 = PyObject_RichCompare(__pyx_v_retries, __pyx_int_0, Py_LE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 249, __pyx_L1_error)
-    __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 249, __pyx_L1_error)
+    __pyx_t_1 = PyObject_RichCompare(__pyx_v_retries, __pyx_int_0, Py_LE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 247, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 247, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     if (unlikely(__pyx_t_7)) {
 
-      /* "serialhdl.pyx":250
+      /* "serialhdl.pyx":248
  *                 return params
  *             if retries <= 0:
  *                 self.serial.register_response(None, self.name, self.oid)             # <<<<<<<<<<<<<<
  *                 raise error("Unable to obtain '%s' response" % (self.name,))
  *             reactor = self.serial.reactor
  */
-      __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serial); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 250, __pyx_L1_error)
+      __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serial); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 248, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_5);
-      __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_register_response); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 250, __pyx_L1_error)
+      __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_register_response); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 248, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_9);
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-      __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_name_2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 250, __pyx_L1_error)
+      __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_name_2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 248, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_5);
-      __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_oid); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 250, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_oid); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 248, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
       __pyx_t_3 = NULL;
       __pyx_t_4 = 0;
@@ -10678,7 +10542,7 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
       #if CYTHON_FAST_PYCALL
       if (PyFunction_Check(__pyx_t_9)) {
         PyObject *__pyx_temp[4] = {__pyx_t_3, Py_None, __pyx_t_5, __pyx_t_2};
-        __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_9, __pyx_temp+1-__pyx_t_4, 3+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 250, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_9, __pyx_temp+1-__pyx_t_4, 3+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 248, __pyx_L1_error)
         __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
         __Pyx_GOTREF(__pyx_t_1);
         __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
@@ -10688,7 +10552,7 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
       #if CYTHON_FAST_PYCCALL
       if (__Pyx_PyFastCFunction_Check(__pyx_t_9)) {
         PyObject *__pyx_temp[4] = {__pyx_t_3, Py_None, __pyx_t_5, __pyx_t_2};
-        __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_9, __pyx_temp+1-__pyx_t_4, 3+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 250, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_9, __pyx_temp+1-__pyx_t_4, 3+__pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 248, __pyx_L1_error)
         __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
         __Pyx_GOTREF(__pyx_t_1);
         __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
@@ -10696,7 +10560,7 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
       } else
       #endif
       {
-        __pyx_t_8 = PyTuple_New(3+__pyx_t_4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 250, __pyx_L1_error)
+        __pyx_t_8 = PyTuple_New(3+__pyx_t_4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 248, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_8);
         if (__pyx_t_3) {
           __Pyx_GIVEREF(__pyx_t_3); PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_3); __pyx_t_3 = NULL;
@@ -10710,23 +10574,23 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
         PyTuple_SET_ITEM(__pyx_t_8, 2+__pyx_t_4, __pyx_t_2);
         __pyx_t_5 = 0;
         __pyx_t_2 = 0;
-        __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_9, __pyx_t_8, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 250, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_9, __pyx_t_8, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 248, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
         __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
       }
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-      /* "serialhdl.pyx":251
+      /* "serialhdl.pyx":249
  *             if retries <= 0:
  *                 self.serial.register_response(None, self.name, self.oid)
  *                 raise error("Unable to obtain '%s' response" % (self.name,))             # <<<<<<<<<<<<<<
  *             reactor = self.serial.reactor
  *             reactor.pause(reactor.monotonic() + retry_delay)
  */
-      __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_error); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 251, __pyx_L1_error)
+      __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_error); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 249, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_9);
-      __pyx_t_8 = PyTuple_New(3); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 251, __pyx_L1_error)
+      __pyx_t_8 = PyTuple_New(3); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 249, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_8);
       __pyx_t_10 = 0;
       __pyx_t_11 = 127;
@@ -10734,9 +10598,9 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
       __pyx_t_10 += 18;
       __Pyx_GIVEREF(__pyx_kp_u_Unable_to_obtain);
       PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_kp_u_Unable_to_obtain);
-      __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_name_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 251, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_name_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 249, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
-      __pyx_t_5 = __Pyx_PyObject_FormatSimpleAndDecref(PyObject_Unicode(__pyx_t_2), __pyx_empty_unicode); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 251, __pyx_L1_error)
+      __pyx_t_5 = __Pyx_PyObject_FormatSimpleAndDecref(PyObject_Unicode(__pyx_t_2), __pyx_empty_unicode); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 249, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_5);
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
       __pyx_t_11 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_5) > __pyx_t_11) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_5) : __pyx_t_11;
@@ -10748,7 +10612,7 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
       __pyx_t_10 += 10;
       __Pyx_GIVEREF(__pyx_kp_u_response_2);
       PyTuple_SET_ITEM(__pyx_t_8, 2, __pyx_kp_u_response_2);
-      __pyx_t_5 = __Pyx_PyUnicode_Join(__pyx_t_8, 3, __pyx_t_10, __pyx_t_11); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 251, __pyx_L1_error)
+      __pyx_t_5 = __Pyx_PyUnicode_Join(__pyx_t_8, 3, __pyx_t_10, __pyx_t_11); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 249, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_5);
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
       __pyx_t_8 = NULL;
@@ -10764,14 +10628,14 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
       __pyx_t_1 = (__pyx_t_8) ? __Pyx_PyObject_Call2Args(__pyx_t_9, __pyx_t_8, __pyx_t_5) : __Pyx_PyObject_CallOneArg(__pyx_t_9, __pyx_t_5);
       __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-      if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 251, __pyx_L1_error)
+      if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 249, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
       __Pyx_Raise(__pyx_t_1, 0, 0, 0);
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-      __PYX_ERR(0, 251, __pyx_L1_error)
+      __PYX_ERR(0, 249, __pyx_L1_error)
 
-      /* "serialhdl.pyx":249
+      /* "serialhdl.pyx":247
  *                 self.serial.register_response(None, self.name, self.oid)
  *                 return params
  *             if retries <= 0:             # <<<<<<<<<<<<<<
@@ -10780,31 +10644,31 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
  */
     }
 
-    /* "serialhdl.pyx":252
+    /* "serialhdl.pyx":250
  *                 self.serial.register_response(None, self.name, self.oid)
  *                 raise error("Unable to obtain '%s' response" % (self.name,))
  *             reactor = self.serial.reactor             # <<<<<<<<<<<<<<
  *             reactor.pause(reactor.monotonic() + retry_delay)
  *             retries -= 1
  */
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serial); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 252, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_serial); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 250, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_reactor); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 252, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_reactor); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 250, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_XDECREF_SET(__pyx_v_reactor, __pyx_t_9);
     __pyx_t_9 = 0;
 
-    /* "serialhdl.pyx":253
+    /* "serialhdl.pyx":251
  *                 raise error("Unable to obtain '%s' response" % (self.name,))
  *             reactor = self.serial.reactor
  *             reactor.pause(reactor.monotonic() + retry_delay)             # <<<<<<<<<<<<<<
  *             retries -= 1
  *             retry_delay *= 2.
  */
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 253, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 251, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 253, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 251, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __pyx_t_2 = NULL;
     if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_8))) {
@@ -10818,12 +10682,12 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
     }
     __pyx_t_5 = (__pyx_t_2) ? __Pyx_PyObject_CallOneArg(__pyx_t_8, __pyx_t_2) : __Pyx_PyObject_CallNoArg(__pyx_t_8);
     __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-    if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 253, __pyx_L1_error)
+    if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 251, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-    __pyx_t_8 = PyFloat_FromDouble(__pyx_v_retry_delay); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 253, __pyx_L1_error)
+    __pyx_t_8 = PyFloat_FromDouble(__pyx_v_retry_delay); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 251, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
-    __pyx_t_2 = PyNumber_Add(__pyx_t_5, __pyx_t_8); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 253, __pyx_L1_error)
+    __pyx_t_2 = PyNumber_Add(__pyx_t_5, __pyx_t_8); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 251, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
@@ -10840,24 +10704,24 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
     __pyx_t_9 = (__pyx_t_8) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_8, __pyx_t_2) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_2);
     __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 253, __pyx_L1_error)
+    if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 251, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-    /* "serialhdl.pyx":254
+    /* "serialhdl.pyx":252
  *             reactor = self.serial.reactor
  *             reactor.pause(reactor.monotonic() + retry_delay)
  *             retries -= 1             # <<<<<<<<<<<<<<
  *             retry_delay *= 2.
  * 
  */
-    __pyx_t_9 = __Pyx_PyInt_SubtractObjC(__pyx_v_retries, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 254, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyInt_SubtractObjC(__pyx_v_retries, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 252, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_DECREF_SET(__pyx_v_retries, __pyx_t_9);
     __pyx_t_9 = 0;
 
-    /* "serialhdl.pyx":255
+    /* "serialhdl.pyx":253
  *             reactor.pause(reactor.monotonic() + retry_delay)
  *             retries -= 1
  *             retry_delay *= 2.             # <<<<<<<<<<<<<<
@@ -10867,7 +10731,7 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
     __pyx_v_retry_delay = (__pyx_v_retry_delay * 2.);
   }
 
-  /* "serialhdl.pyx":240
+  /* "serialhdl.pyx":238
  *     def handle_callback(self, params):
  *         self.last_params = params
  *     def get_response(self, cmd, cmd_queue, minclock=0):             # <<<<<<<<<<<<<<
@@ -10896,7 +10760,7 @@ static PyObject *__pyx_pf_9serialhdl_18SerialRetryCommand_4get_response(CYTHON_U
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":258
+/* "serialhdl.pyx":256
  * 
  * # Attempt to place an AVR stk500v2 style programmer into normal mode
  * def stk500v2_leave(ser, reactor):             # <<<<<<<<<<<<<<
@@ -10936,11 +10800,11 @@ static PyObject *__pyx_pw_9serialhdl_1stk500v2_leave(PyObject *__pyx_self, PyObj
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_reactor)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("stk500v2_leave", 1, 2, 2, 1); __PYX_ERR(0, 258, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("stk500v2_leave", 1, 2, 2, 1); __PYX_ERR(0, 256, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "stk500v2_leave") < 0)) __PYX_ERR(0, 258, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "stk500v2_leave") < 0)) __PYX_ERR(0, 256, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -10953,7 +10817,7 @@ static PyObject *__pyx_pw_9serialhdl_1stk500v2_leave(PyObject *__pyx_self, PyObj
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("stk500v2_leave", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 258, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("stk500v2_leave", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 256, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("serialhdl.stk500v2_leave", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -10979,16 +10843,16 @@ static PyObject *__pyx_pf_9serialhdl_stk500v2_leave(CYTHON_UNUSED PyObject *__py
   int __pyx_t_6;
   __Pyx_RefNannySetupContext("stk500v2_leave", 0);
 
-  /* "serialhdl.pyx":259
+  /* "serialhdl.pyx":257
  * # Attempt to place an AVR stk500v2 style programmer into normal mode
  * def stk500v2_leave(ser, reactor):
  *     logging.debug("Starting stk500v2 leave programmer sequence")             # <<<<<<<<<<<<<<
  *     util.clear_hupcl(ser.fileno())
  *     origbaud = ser.baudrate
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_logging); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 259, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_logging); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 257, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_debug); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 259, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_debug); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 257, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_2 = NULL;
@@ -11003,24 +10867,24 @@ static PyObject *__pyx_pf_9serialhdl_stk500v2_leave(CYTHON_UNUSED PyObject *__py
   }
   __pyx_t_1 = (__pyx_t_2) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_2, __pyx_kp_u_Starting_stk500v2_leave_programm) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_kp_u_Starting_stk500v2_leave_programm);
   __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 259, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 257, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":260
+  /* "serialhdl.pyx":258
  * def stk500v2_leave(ser, reactor):
  *     logging.debug("Starting stk500v2 leave programmer sequence")
  *     util.clear_hupcl(ser.fileno())             # <<<<<<<<<<<<<<
  *     origbaud = ser.baudrate
  *     # Request a dummy speed first as this seems to help reset the port
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_util); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 260, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_util); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 258, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_clear_hupcl); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 260, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_clear_hupcl); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 258, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_ser, __pyx_n_s_fileno); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 260, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_ser, __pyx_n_s_fileno); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 258, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __pyx_t_5 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_4))) {
@@ -11034,7 +10898,7 @@ static PyObject *__pyx_pf_9serialhdl_stk500v2_leave(CYTHON_UNUSED PyObject *__py
   }
   __pyx_t_3 = (__pyx_t_5) ? __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_5) : __Pyx_PyObject_CallNoArg(__pyx_t_4);
   __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
-  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 260, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 258, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_t_4 = NULL;
@@ -11050,40 +10914,40 @@ static PyObject *__pyx_pf_9serialhdl_stk500v2_leave(CYTHON_UNUSED PyObject *__py
   __pyx_t_1 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_4, __pyx_t_3) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3);
   __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 260, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 258, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":261
+  /* "serialhdl.pyx":259
  *     logging.debug("Starting stk500v2 leave programmer sequence")
  *     util.clear_hupcl(ser.fileno())
  *     origbaud = ser.baudrate             # <<<<<<<<<<<<<<
  *     # Request a dummy speed first as this seems to help reset the port
  *     ser.baudrate = 2400
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_ser, __pyx_n_s_baudrate); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 261, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_ser, __pyx_n_s_baudrate); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 259, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_origbaud = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":263
+  /* "serialhdl.pyx":261
  *     origbaud = ser.baudrate
  *     # Request a dummy speed first as this seems to help reset the port
  *     ser.baudrate = 2400             # <<<<<<<<<<<<<<
  *     ser.read(1)
  *     # Send stk500v2 leave programmer sequence
  */
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_baudrate, __pyx_int_2400) < 0) __PYX_ERR(0, 263, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_baudrate, __pyx_int_2400) < 0) __PYX_ERR(0, 261, __pyx_L1_error)
 
-  /* "serialhdl.pyx":264
+  /* "serialhdl.pyx":262
  *     # Request a dummy speed first as this seems to help reset the port
  *     ser.baudrate = 2400
  *     ser.read(1)             # <<<<<<<<<<<<<<
  *     # Send stk500v2 leave programmer sequence
  *     ser.baudrate = 115200
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_ser, __pyx_n_s_read); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 264, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_ser, __pyx_n_s_read); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -11097,30 +10961,30 @@ static PyObject *__pyx_pf_9serialhdl_stk500v2_leave(CYTHON_UNUSED PyObject *__py
   }
   __pyx_t_1 = (__pyx_t_3) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_3, __pyx_int_1) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_int_1);
   __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 264, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":266
+  /* "serialhdl.pyx":264
  *     ser.read(1)
  *     # Send stk500v2 leave programmer sequence
  *     ser.baudrate = 115200             # <<<<<<<<<<<<<<
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     ser.read(4096)
  */
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_baudrate, __pyx_int_115200) < 0) __PYX_ERR(0, 266, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_baudrate, __pyx_int_115200) < 0) __PYX_ERR(0, 264, __pyx_L1_error)
 
-  /* "serialhdl.pyx":267
+  /* "serialhdl.pyx":265
  *     # Send stk500v2 leave programmer sequence
  *     ser.baudrate = 115200
  *     reactor.pause(reactor.monotonic() + 0.100)             # <<<<<<<<<<<<<<
  *     ser.read(4096)
  *     ser.write(b'\x1b\x01\x00\x01\x0e\x11\x04')
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 267, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 265, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 267, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 265, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __pyx_t_5 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_4))) {
@@ -11134,10 +10998,10 @@ static PyObject *__pyx_pf_9serialhdl_stk500v2_leave(CYTHON_UNUSED PyObject *__py
   }
   __pyx_t_3 = (__pyx_t_5) ? __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_5) : __Pyx_PyObject_CallNoArg(__pyx_t_4);
   __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
-  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 267, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 265, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = __Pyx_PyFloat_AddObjC(__pyx_t_3, __pyx_float_0_100, 0.100, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 267, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyFloat_AddObjC(__pyx_t_3, __pyx_float_0_100, 0.100, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 265, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_t_3 = NULL;
@@ -11153,19 +11017,19 @@ static PyObject *__pyx_pf_9serialhdl_stk500v2_leave(CYTHON_UNUSED PyObject *__py
   __pyx_t_1 = (__pyx_t_3) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_3, __pyx_t_4) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_4);
   __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 267, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 265, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":268
+  /* "serialhdl.pyx":266
  *     ser.baudrate = 115200
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     ser.read(4096)             # <<<<<<<<<<<<<<
  *     ser.write(b'\x1b\x01\x00\x01\x0e\x11\x04')
  *     reactor.pause(reactor.monotonic() + 0.050)
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_ser, __pyx_n_s_read); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 268, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_ser, __pyx_n_s_read); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 266, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_4 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -11179,19 +11043,19 @@ static PyObject *__pyx_pf_9serialhdl_stk500v2_leave(CYTHON_UNUSED PyObject *__py
   }
   __pyx_t_1 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_4, __pyx_int_4096) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_int_4096);
   __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 268, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 266, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":269
+  /* "serialhdl.pyx":267
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     ser.read(4096)
  *     ser.write(b'\x1b\x01\x00\x01\x0e\x11\x04')             # <<<<<<<<<<<<<<
  *     reactor.pause(reactor.monotonic() + 0.050)
  *     res = ser.read(4096)
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_ser, __pyx_n_s_write); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 269, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_ser, __pyx_n_s_write); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 267, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_4 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -11205,21 +11069,21 @@ static PyObject *__pyx_pf_9serialhdl_stk500v2_leave(CYTHON_UNUSED PyObject *__py
   }
   __pyx_t_1 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_4, __pyx_kp_b__9) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_kp_b__9);
   __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 269, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 267, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":270
+  /* "serialhdl.pyx":268
  *     ser.read(4096)
  *     ser.write(b'\x1b\x01\x00\x01\x0e\x11\x04')
  *     reactor.pause(reactor.monotonic() + 0.050)             # <<<<<<<<<<<<<<
  *     res = ser.read(4096)
  *     logging.debug("Got %s from stk500v2", repr(res))
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 270, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 268, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 270, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 268, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_t_5 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_3))) {
@@ -11233,10 +11097,10 @@ static PyObject *__pyx_pf_9serialhdl_stk500v2_leave(CYTHON_UNUSED PyObject *__py
   }
   __pyx_t_4 = (__pyx_t_5) ? __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_5) : __Pyx_PyObject_CallNoArg(__pyx_t_3);
   __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
-  if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 270, __pyx_L1_error)
+  if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 268, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = __Pyx_PyFloat_AddObjC(__pyx_t_4, __pyx_float_0_050, 0.050, 0, 0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 270, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyFloat_AddObjC(__pyx_t_4, __pyx_float_0_050, 0.050, 0, 0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 268, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_t_4 = NULL;
@@ -11252,19 +11116,19 @@ static PyObject *__pyx_pf_9serialhdl_stk500v2_leave(CYTHON_UNUSED PyObject *__py
   __pyx_t_1 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_4, __pyx_t_3) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3);
   __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 270, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 268, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":271
+  /* "serialhdl.pyx":269
  *     ser.write(b'\x1b\x01\x00\x01\x0e\x11\x04')
  *     reactor.pause(reactor.monotonic() + 0.050)
  *     res = ser.read(4096)             # <<<<<<<<<<<<<<
  *     logging.debug("Got %s from stk500v2", repr(res))
  *     ser.baudrate = origbaud
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_ser, __pyx_n_s_read); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 271, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_ser, __pyx_n_s_read); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 269, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -11278,25 +11142,25 @@ static PyObject *__pyx_pf_9serialhdl_stk500v2_leave(CYTHON_UNUSED PyObject *__py
   }
   __pyx_t_1 = (__pyx_t_3) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_3, __pyx_int_4096) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_int_4096);
   __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 271, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 269, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_res = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":272
+  /* "serialhdl.pyx":270
  *     reactor.pause(reactor.monotonic() + 0.050)
  *     res = ser.read(4096)
  *     logging.debug("Got %s from stk500v2", repr(res))             # <<<<<<<<<<<<<<
  *     ser.baudrate = origbaud
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_logging); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 272, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_logging); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 270, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_debug); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 272, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_debug); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 270, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = PyObject_Repr(__pyx_v_res); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 272, __pyx_L1_error)
+  __pyx_t_2 = PyObject_Repr(__pyx_v_res); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 270, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_4 = NULL;
   __pyx_t_6 = 0;
@@ -11313,7 +11177,7 @@ static PyObject *__pyx_pf_9serialhdl_stk500v2_leave(CYTHON_UNUSED PyObject *__py
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[3] = {__pyx_t_4, __pyx_kp_u_Got_s_from_stk500v2, __pyx_t_2};
-    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_6, 2+__pyx_t_6); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 272, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_6, 2+__pyx_t_6); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 270, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -11322,14 +11186,14 @@ static PyObject *__pyx_pf_9serialhdl_stk500v2_leave(CYTHON_UNUSED PyObject *__py
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[3] = {__pyx_t_4, __pyx_kp_u_Got_s_from_stk500v2, __pyx_t_2};
-    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_6, 2+__pyx_t_6); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 272, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_6, 2+__pyx_t_6); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 270, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   } else
   #endif
   {
-    __pyx_t_5 = PyTuple_New(2+__pyx_t_6); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 272, __pyx_L1_error)
+    __pyx_t_5 = PyTuple_New(2+__pyx_t_6); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 270, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     if (__pyx_t_4) {
       __Pyx_GIVEREF(__pyx_t_4); PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_4); __pyx_t_4 = NULL;
@@ -11340,23 +11204,23 @@ static PyObject *__pyx_pf_9serialhdl_stk500v2_leave(CYTHON_UNUSED PyObject *__py
     __Pyx_GIVEREF(__pyx_t_2);
     PyTuple_SET_ITEM(__pyx_t_5, 1+__pyx_t_6, __pyx_t_2);
     __pyx_t_2 = 0;
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_5, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 272, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_5, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 270, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   }
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":273
+  /* "serialhdl.pyx":271
  *     res = ser.read(4096)
  *     logging.debug("Got %s from stk500v2", repr(res))
  *     ser.baudrate = origbaud             # <<<<<<<<<<<<<<
  * 
  * def cheetah_reset(serialport, reactor):
  */
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_baudrate, __pyx_v_origbaud) < 0) __PYX_ERR(0, 273, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_baudrate, __pyx_v_origbaud) < 0) __PYX_ERR(0, 271, __pyx_L1_error)
 
-  /* "serialhdl.pyx":258
+  /* "serialhdl.pyx":256
  * 
  * # Attempt to place an AVR stk500v2 style programmer into normal mode
  * def stk500v2_leave(ser, reactor):             # <<<<<<<<<<<<<<
@@ -11383,7 +11247,7 @@ static PyObject *__pyx_pf_9serialhdl_stk500v2_leave(CYTHON_UNUSED PyObject *__py
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":275
+/* "serialhdl.pyx":273
  *     ser.baudrate = origbaud
  * 
  * def cheetah_reset(serialport, reactor):             # <<<<<<<<<<<<<<
@@ -11423,11 +11287,11 @@ static PyObject *__pyx_pw_9serialhdl_3cheetah_reset(PyObject *__pyx_self, PyObje
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_reactor)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("cheetah_reset", 1, 2, 2, 1); __PYX_ERR(0, 275, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("cheetah_reset", 1, 2, 2, 1); __PYX_ERR(0, 273, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "cheetah_reset") < 0)) __PYX_ERR(0, 275, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "cheetah_reset") < 0)) __PYX_ERR(0, 273, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -11440,7 +11304,7 @@ static PyObject *__pyx_pw_9serialhdl_3cheetah_reset(PyObject *__pyx_self, PyObje
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("cheetah_reset", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 275, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("cheetah_reset", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 273, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("serialhdl.cheetah_reset", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -11464,56 +11328,56 @@ static PyObject *__pyx_pf_9serialhdl_2cheetah_reset(CYTHON_UNUSED PyObject *__py
   PyObject *__pyx_t_5 = NULL;
   __Pyx_RefNannySetupContext("cheetah_reset", 0);
 
-  /* "serialhdl.pyx":280
+  /* "serialhdl.pyx":278
  *     # sure.
  *     # Open the serial port with RTS asserted
  *     ser = serial.Serial(baudrate=2400, timeout=0, exclusive=True)             # <<<<<<<<<<<<<<
  *     ser.port = serialport
  *     ser.rts = True
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_serial); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 280, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_serial); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 278, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_Serial); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 280, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_Serial); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 278, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyDict_NewPresized(3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 280, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyDict_NewPresized(3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 278, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_baudrate, __pyx_int_2400) < 0) __PYX_ERR(0, 280, __pyx_L1_error)
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_timeout, __pyx_int_0) < 0) __PYX_ERR(0, 280, __pyx_L1_error)
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_exclusive, Py_True) < 0) __PYX_ERR(0, 280, __pyx_L1_error)
-  __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_empty_tuple, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 280, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_baudrate, __pyx_int_2400) < 0) __PYX_ERR(0, 278, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_timeout, __pyx_int_0) < 0) __PYX_ERR(0, 278, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_exclusive, Py_True) < 0) __PYX_ERR(0, 278, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_empty_tuple, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 278, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_ser = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "serialhdl.pyx":281
+  /* "serialhdl.pyx":279
  *     # Open the serial port with RTS asserted
  *     ser = serial.Serial(baudrate=2400, timeout=0, exclusive=True)
  *     ser.port = serialport             # <<<<<<<<<<<<<<
  *     ser.rts = True
  *     ser.open()
  */
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_port, __pyx_v_serialport) < 0) __PYX_ERR(0, 281, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_port, __pyx_v_serialport) < 0) __PYX_ERR(0, 279, __pyx_L1_error)
 
-  /* "serialhdl.pyx":282
+  /* "serialhdl.pyx":280
  *     ser = serial.Serial(baudrate=2400, timeout=0, exclusive=True)
  *     ser.port = serialport
  *     ser.rts = True             # <<<<<<<<<<<<<<
  *     ser.open()
  *     ser.read(1)
  */
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_rts, Py_True) < 0) __PYX_ERR(0, 282, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_rts, Py_True) < 0) __PYX_ERR(0, 280, __pyx_L1_error)
 
-  /* "serialhdl.pyx":283
+  /* "serialhdl.pyx":281
  *     ser.port = serialport
  *     ser.rts = True
  *     ser.open()             # <<<<<<<<<<<<<<
  *     ser.read(1)
  *     reactor.pause(reactor.monotonic() + 0.100)
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_ser, __pyx_n_s_open); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 283, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_ser, __pyx_n_s_open); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 281, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_2 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_1))) {
@@ -11527,19 +11391,19 @@ static PyObject *__pyx_pf_9serialhdl_2cheetah_reset(CYTHON_UNUSED PyObject *__py
   }
   __pyx_t_3 = (__pyx_t_2) ? __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_2) : __Pyx_PyObject_CallNoArg(__pyx_t_1);
   __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 283, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 281, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "serialhdl.pyx":284
+  /* "serialhdl.pyx":282
  *     ser.rts = True
  *     ser.open()
  *     ser.read(1)             # <<<<<<<<<<<<<<
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     # Toggle DTR
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_ser, __pyx_n_s_read); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 284, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_ser, __pyx_n_s_read); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 282, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_2 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_1))) {
@@ -11553,21 +11417,21 @@ static PyObject *__pyx_pf_9serialhdl_2cheetah_reset(CYTHON_UNUSED PyObject *__py
   }
   __pyx_t_3 = (__pyx_t_2) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_2, __pyx_int_1) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_int_1);
   __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 284, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 282, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "serialhdl.pyx":285
+  /* "serialhdl.pyx":283
  *     ser.open()
  *     ser.read(1)
  *     reactor.pause(reactor.monotonic() + 0.100)             # <<<<<<<<<<<<<<
  *     # Toggle DTR
  *     ser.dtr = True
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 285, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 283, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 285, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 283, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __pyx_t_5 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_4))) {
@@ -11581,10 +11445,10 @@ static PyObject *__pyx_pf_9serialhdl_2cheetah_reset(CYTHON_UNUSED PyObject *__py
   }
   __pyx_t_2 = (__pyx_t_5) ? __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_5) : __Pyx_PyObject_CallNoArg(__pyx_t_4);
   __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
-  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 285, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 283, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = __Pyx_PyFloat_AddObjC(__pyx_t_2, __pyx_float_0_100, 0.100, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 285, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyFloat_AddObjC(__pyx_t_2, __pyx_float_0_100, 0.100, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 283, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_2 = NULL;
@@ -11600,30 +11464,30 @@ static PyObject *__pyx_pf_9serialhdl_2cheetah_reset(CYTHON_UNUSED PyObject *__py
   __pyx_t_3 = (__pyx_t_2) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_2, __pyx_t_4) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_4);
   __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 285, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 283, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "serialhdl.pyx":287
+  /* "serialhdl.pyx":285
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     # Toggle DTR
  *     ser.dtr = True             # <<<<<<<<<<<<<<
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     ser.dtr = False
  */
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_dtr, Py_True) < 0) __PYX_ERR(0, 287, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_dtr, Py_True) < 0) __PYX_ERR(0, 285, __pyx_L1_error)
 
-  /* "serialhdl.pyx":288
+  /* "serialhdl.pyx":286
  *     # Toggle DTR
  *     ser.dtr = True
  *     reactor.pause(reactor.monotonic() + 0.100)             # <<<<<<<<<<<<<<
  *     ser.dtr = False
  *     # Deassert RTS
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 288, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 286, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 288, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 286, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_5 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -11637,10 +11501,10 @@ static PyObject *__pyx_pf_9serialhdl_2cheetah_reset(CYTHON_UNUSED PyObject *__py
   }
   __pyx_t_4 = (__pyx_t_5) ? __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_5) : __Pyx_PyObject_CallNoArg(__pyx_t_2);
   __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
-  if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 288, __pyx_L1_error)
+  if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 286, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = __Pyx_PyFloat_AddObjC(__pyx_t_4, __pyx_float_0_100, 0.100, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 288, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyFloat_AddObjC(__pyx_t_4, __pyx_float_0_100, 0.100, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 286, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_t_4 = NULL;
@@ -11656,30 +11520,30 @@ static PyObject *__pyx_pf_9serialhdl_2cheetah_reset(CYTHON_UNUSED PyObject *__py
   __pyx_t_3 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_4, __pyx_t_2) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_2);
   __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 288, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 286, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "serialhdl.pyx":289
+  /* "serialhdl.pyx":287
  *     ser.dtr = True
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     ser.dtr = False             # <<<<<<<<<<<<<<
  *     # Deassert RTS
  *     reactor.pause(reactor.monotonic() + 0.100)
  */
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_dtr, Py_False) < 0) __PYX_ERR(0, 289, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_dtr, Py_False) < 0) __PYX_ERR(0, 287, __pyx_L1_error)
 
-  /* "serialhdl.pyx":291
+  /* "serialhdl.pyx":289
  *     ser.dtr = False
  *     # Deassert RTS
  *     reactor.pause(reactor.monotonic() + 0.100)             # <<<<<<<<<<<<<<
  *     ser.rts = False
  *     reactor.pause(reactor.monotonic() + 0.100)
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 291, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 289, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 291, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 289, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __pyx_t_5 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_4))) {
@@ -11693,10 +11557,10 @@ static PyObject *__pyx_pf_9serialhdl_2cheetah_reset(CYTHON_UNUSED PyObject *__py
   }
   __pyx_t_2 = (__pyx_t_5) ? __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_5) : __Pyx_PyObject_CallNoArg(__pyx_t_4);
   __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
-  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 291, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 289, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = __Pyx_PyFloat_AddObjC(__pyx_t_2, __pyx_float_0_100, 0.100, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 291, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyFloat_AddObjC(__pyx_t_2, __pyx_float_0_100, 0.100, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 289, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_2 = NULL;
@@ -11712,30 +11576,30 @@ static PyObject *__pyx_pf_9serialhdl_2cheetah_reset(CYTHON_UNUSED PyObject *__py
   __pyx_t_3 = (__pyx_t_2) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_2, __pyx_t_4) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_4);
   __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 291, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 289, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "serialhdl.pyx":292
+  /* "serialhdl.pyx":290
  *     # Deassert RTS
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     ser.rts = False             # <<<<<<<<<<<<<<
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     # Toggle DTR again
  */
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_rts, Py_False) < 0) __PYX_ERR(0, 292, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_rts, Py_False) < 0) __PYX_ERR(0, 290, __pyx_L1_error)
 
-  /* "serialhdl.pyx":293
+  /* "serialhdl.pyx":291
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     ser.rts = False
  *     reactor.pause(reactor.monotonic() + 0.100)             # <<<<<<<<<<<<<<
  *     # Toggle DTR again
  *     ser.dtr = True
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 293, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 291, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 293, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 291, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_5 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -11749,10 +11613,10 @@ static PyObject *__pyx_pf_9serialhdl_2cheetah_reset(CYTHON_UNUSED PyObject *__py
   }
   __pyx_t_4 = (__pyx_t_5) ? __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_5) : __Pyx_PyObject_CallNoArg(__pyx_t_2);
   __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
-  if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 293, __pyx_L1_error)
+  if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 291, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = __Pyx_PyFloat_AddObjC(__pyx_t_4, __pyx_float_0_100, 0.100, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 293, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyFloat_AddObjC(__pyx_t_4, __pyx_float_0_100, 0.100, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 291, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_t_4 = NULL;
@@ -11768,30 +11632,30 @@ static PyObject *__pyx_pf_9serialhdl_2cheetah_reset(CYTHON_UNUSED PyObject *__py
   __pyx_t_3 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_4, __pyx_t_2) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_2);
   __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 293, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 291, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "serialhdl.pyx":295
+  /* "serialhdl.pyx":293
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     # Toggle DTR again
  *     ser.dtr = True             # <<<<<<<<<<<<<<
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     ser.dtr = False
  */
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_dtr, Py_True) < 0) __PYX_ERR(0, 295, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_dtr, Py_True) < 0) __PYX_ERR(0, 293, __pyx_L1_error)
 
-  /* "serialhdl.pyx":296
+  /* "serialhdl.pyx":294
  *     # Toggle DTR again
  *     ser.dtr = True
  *     reactor.pause(reactor.monotonic() + 0.100)             # <<<<<<<<<<<<<<
  *     ser.dtr = False
  *     reactor.pause(reactor.monotonic() + 0.100)
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 296, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 294, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 296, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 294, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __pyx_t_5 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_4))) {
@@ -11805,10 +11669,10 @@ static PyObject *__pyx_pf_9serialhdl_2cheetah_reset(CYTHON_UNUSED PyObject *__py
   }
   __pyx_t_2 = (__pyx_t_5) ? __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_5) : __Pyx_PyObject_CallNoArg(__pyx_t_4);
   __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
-  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 296, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 294, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = __Pyx_PyFloat_AddObjC(__pyx_t_2, __pyx_float_0_100, 0.100, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 296, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyFloat_AddObjC(__pyx_t_2, __pyx_float_0_100, 0.100, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 294, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_2 = NULL;
@@ -11824,30 +11688,30 @@ static PyObject *__pyx_pf_9serialhdl_2cheetah_reset(CYTHON_UNUSED PyObject *__py
   __pyx_t_3 = (__pyx_t_2) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_2, __pyx_t_4) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_4);
   __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 296, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 294, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "serialhdl.pyx":297
+  /* "serialhdl.pyx":295
  *     ser.dtr = True
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     ser.dtr = False             # <<<<<<<<<<<<<<
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     ser.close()
  */
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_dtr, Py_False) < 0) __PYX_ERR(0, 297, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_dtr, Py_False) < 0) __PYX_ERR(0, 295, __pyx_L1_error)
 
-  /* "serialhdl.pyx":298
+  /* "serialhdl.pyx":296
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     ser.dtr = False
  *     reactor.pause(reactor.monotonic() + 0.100)             # <<<<<<<<<<<<<<
  *     ser.close()
  * 
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 298, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 296, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 298, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 296, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_5 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -11861,10 +11725,10 @@ static PyObject *__pyx_pf_9serialhdl_2cheetah_reset(CYTHON_UNUSED PyObject *__py
   }
   __pyx_t_4 = (__pyx_t_5) ? __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_5) : __Pyx_PyObject_CallNoArg(__pyx_t_2);
   __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
-  if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 298, __pyx_L1_error)
+  if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 296, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = __Pyx_PyFloat_AddObjC(__pyx_t_4, __pyx_float_0_100, 0.100, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 298, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyFloat_AddObjC(__pyx_t_4, __pyx_float_0_100, 0.100, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 296, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_t_4 = NULL;
@@ -11880,19 +11744,19 @@ static PyObject *__pyx_pf_9serialhdl_2cheetah_reset(CYTHON_UNUSED PyObject *__py
   __pyx_t_3 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_4, __pyx_t_2) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_2);
   __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 298, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 296, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "serialhdl.pyx":299
+  /* "serialhdl.pyx":297
  *     ser.dtr = False
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     ser.close()             # <<<<<<<<<<<<<<
  * 
  * # Attempt an arduino style reset on a serial port
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_ser, __pyx_n_s_close); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 299, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_ser, __pyx_n_s_close); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 297, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_2 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_1))) {
@@ -11906,12 +11770,12 @@ static PyObject *__pyx_pf_9serialhdl_2cheetah_reset(CYTHON_UNUSED PyObject *__py
   }
   __pyx_t_3 = (__pyx_t_2) ? __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_2) : __Pyx_PyObject_CallNoArg(__pyx_t_1);
   __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 299, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 297, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "serialhdl.pyx":275
+  /* "serialhdl.pyx":273
  *     ser.baudrate = origbaud
  * 
  * def cheetah_reset(serialport, reactor):             # <<<<<<<<<<<<<<
@@ -11937,7 +11801,7 @@ static PyObject *__pyx_pf_9serialhdl_2cheetah_reset(CYTHON_UNUSED PyObject *__py
   return __pyx_r;
 }
 
-/* "serialhdl.pyx":302
+/* "serialhdl.pyx":300
  * 
  * # Attempt an arduino style reset on a serial port
  * def arduino_reset(serialport, reactor):             # <<<<<<<<<<<<<<
@@ -11977,11 +11841,11 @@ static PyObject *__pyx_pw_9serialhdl_5arduino_reset(PyObject *__pyx_self, PyObje
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_reactor)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("arduino_reset", 1, 2, 2, 1); __PYX_ERR(0, 302, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("arduino_reset", 1, 2, 2, 1); __PYX_ERR(0, 300, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "arduino_reset") < 0)) __PYX_ERR(0, 302, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "arduino_reset") < 0)) __PYX_ERR(0, 300, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -11994,7 +11858,7 @@ static PyObject *__pyx_pw_9serialhdl_5arduino_reset(PyObject *__pyx_self, PyObje
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("arduino_reset", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 302, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("arduino_reset", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 300, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("serialhdl.arduino_reset", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -12018,19 +11882,19 @@ static PyObject *__pyx_pf_9serialhdl_4arduino_reset(CYTHON_UNUSED PyObject *__py
   PyObject *__pyx_t_5 = NULL;
   __Pyx_RefNannySetupContext("arduino_reset", 0);
 
-  /* "serialhdl.pyx":304
+  /* "serialhdl.pyx":302
  * def arduino_reset(serialport, reactor):
  *     # First try opening the port at a different baud
  *     ser = serial.Serial(serialport, 2400, timeout=0, exclusive=True)             # <<<<<<<<<<<<<<
  *     ser.read(1)
  *     reactor.pause(reactor.monotonic() + 0.100)
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_serial); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 304, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_serial); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 302, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_Serial); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 304, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_Serial); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 302, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = PyTuple_New(2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 304, __pyx_L1_error)
+  __pyx_t_1 = PyTuple_New(2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 302, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_INCREF(__pyx_v_serialport);
   __Pyx_GIVEREF(__pyx_v_serialport);
@@ -12038,11 +11902,11 @@ static PyObject *__pyx_pf_9serialhdl_4arduino_reset(CYTHON_UNUSED PyObject *__py
   __Pyx_INCREF(__pyx_int_2400);
   __Pyx_GIVEREF(__pyx_int_2400);
   PyTuple_SET_ITEM(__pyx_t_1, 1, __pyx_int_2400);
-  __pyx_t_3 = __Pyx_PyDict_NewPresized(2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 304, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyDict_NewPresized(2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 302, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  if (PyDict_SetItem(__pyx_t_3, __pyx_n_s_timeout, __pyx_int_0) < 0) __PYX_ERR(0, 304, __pyx_L1_error)
-  if (PyDict_SetItem(__pyx_t_3, __pyx_n_s_exclusive, Py_True) < 0) __PYX_ERR(0, 304, __pyx_L1_error)
-  __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_1, __pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 304, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_3, __pyx_n_s_timeout, __pyx_int_0) < 0) __PYX_ERR(0, 302, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_3, __pyx_n_s_exclusive, Py_True) < 0) __PYX_ERR(0, 302, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_1, __pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 302, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
@@ -12050,14 +11914,14 @@ static PyObject *__pyx_pf_9serialhdl_4arduino_reset(CYTHON_UNUSED PyObject *__py
   __pyx_v_ser = __pyx_t_4;
   __pyx_t_4 = 0;
 
-  /* "serialhdl.pyx":305
+  /* "serialhdl.pyx":303
  *     # First try opening the port at a different baud
  *     ser = serial.Serial(serialport, 2400, timeout=0, exclusive=True)
  *     ser.read(1)             # <<<<<<<<<<<<<<
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     # Then toggle DTR
  */
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_ser, __pyx_n_s_read); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 305, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_ser, __pyx_n_s_read); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 303, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_t_1 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_3))) {
@@ -12071,21 +11935,21 @@ static PyObject *__pyx_pf_9serialhdl_4arduino_reset(CYTHON_UNUSED PyObject *__py
   }
   __pyx_t_4 = (__pyx_t_1) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_1, __pyx_int_1) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_int_1);
   __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
-  if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 305, __pyx_L1_error)
+  if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 303, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-  /* "serialhdl.pyx":306
+  /* "serialhdl.pyx":304
  *     ser = serial.Serial(serialport, 2400, timeout=0, exclusive=True)
  *     ser.read(1)
  *     reactor.pause(reactor.monotonic() + 0.100)             # <<<<<<<<<<<<<<
  *     # Then toggle DTR
  *     ser.dtr = True
  */
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 306, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 304, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 306, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 304, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_5 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -12099,10 +11963,10 @@ static PyObject *__pyx_pf_9serialhdl_4arduino_reset(CYTHON_UNUSED PyObject *__py
   }
   __pyx_t_1 = (__pyx_t_5) ? __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_5) : __Pyx_PyObject_CallNoArg(__pyx_t_2);
   __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 306, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 304, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = __Pyx_PyFloat_AddObjC(__pyx_t_1, __pyx_float_0_100, 0.100, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 306, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyFloat_AddObjC(__pyx_t_1, __pyx_float_0_100, 0.100, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 304, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_1 = NULL;
@@ -12118,30 +11982,30 @@ static PyObject *__pyx_pf_9serialhdl_4arduino_reset(CYTHON_UNUSED PyObject *__py
   __pyx_t_4 = (__pyx_t_1) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_1, __pyx_t_2) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_2);
   __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 306, __pyx_L1_error)
+  if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 304, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-  /* "serialhdl.pyx":308
+  /* "serialhdl.pyx":306
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     # Then toggle DTR
  *     ser.dtr = True             # <<<<<<<<<<<<<<
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     ser.dtr = False
  */
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_dtr, Py_True) < 0) __PYX_ERR(0, 308, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_dtr, Py_True) < 0) __PYX_ERR(0, 306, __pyx_L1_error)
 
-  /* "serialhdl.pyx":309
+  /* "serialhdl.pyx":307
  *     # Then toggle DTR
  *     ser.dtr = True
  *     reactor.pause(reactor.monotonic() + 0.100)             # <<<<<<<<<<<<<<
  *     ser.dtr = False
  *     reactor.pause(reactor.monotonic() + 0.100)
  */
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 309, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 307, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 309, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 307, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_5 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_1))) {
@@ -12155,10 +12019,10 @@ static PyObject *__pyx_pf_9serialhdl_4arduino_reset(CYTHON_UNUSED PyObject *__py
   }
   __pyx_t_2 = (__pyx_t_5) ? __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_5) : __Pyx_PyObject_CallNoArg(__pyx_t_1);
   __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
-  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 309, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 307, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyFloat_AddObjC(__pyx_t_2, __pyx_float_0_100, 0.100, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 309, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyFloat_AddObjC(__pyx_t_2, __pyx_float_0_100, 0.100, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 307, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_2 = NULL;
@@ -12174,29 +12038,29 @@ static PyObject *__pyx_pf_9serialhdl_4arduino_reset(CYTHON_UNUSED PyObject *__py
   __pyx_t_4 = (__pyx_t_2) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_2, __pyx_t_1) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_1);
   __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 309, __pyx_L1_error)
+  if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 307, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-  /* "serialhdl.pyx":310
+  /* "serialhdl.pyx":308
  *     ser.dtr = True
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     ser.dtr = False             # <<<<<<<<<<<<<<
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     ser.close()
  */
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_dtr, Py_False) < 0) __PYX_ERR(0, 310, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_ser, __pyx_n_s_dtr, Py_False) < 0) __PYX_ERR(0, 308, __pyx_L1_error)
 
-  /* "serialhdl.pyx":311
+  /* "serialhdl.pyx":309
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     ser.dtr = False
  *     reactor.pause(reactor.monotonic() + 0.100)             # <<<<<<<<<<<<<<
  *     ser.close()
  */
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 311, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_pause); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 309, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 311, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_reactor, __pyx_n_s_monotonic); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 309, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_5 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -12210,10 +12074,10 @@ static PyObject *__pyx_pf_9serialhdl_4arduino_reset(CYTHON_UNUSED PyObject *__py
   }
   __pyx_t_1 = (__pyx_t_5) ? __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_5) : __Pyx_PyObject_CallNoArg(__pyx_t_2);
   __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 311, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 309, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = __Pyx_PyFloat_AddObjC(__pyx_t_1, __pyx_float_0_100, 0.100, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 311, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyFloat_AddObjC(__pyx_t_1, __pyx_float_0_100, 0.100, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 309, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_1 = NULL;
@@ -12229,17 +12093,17 @@ static PyObject *__pyx_pf_9serialhdl_4arduino_reset(CYTHON_UNUSED PyObject *__py
   __pyx_t_4 = (__pyx_t_1) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_1, __pyx_t_2) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_2);
   __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 311, __pyx_L1_error)
+  if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 309, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-  /* "serialhdl.pyx":312
+  /* "serialhdl.pyx":310
  *     ser.dtr = False
  *     reactor.pause(reactor.monotonic() + 0.100)
  *     ser.close()             # <<<<<<<<<<<<<<
  */
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_ser, __pyx_n_s_close); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 312, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_ser, __pyx_n_s_close); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 310, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_t_2 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_3))) {
@@ -12253,12 +12117,12 @@ static PyObject *__pyx_pf_9serialhdl_4arduino_reset(CYTHON_UNUSED PyObject *__py
   }
   __pyx_t_4 = (__pyx_t_2) ? __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_2) : __Pyx_PyObject_CallNoArg(__pyx_t_3);
   __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 312, __pyx_L1_error)
+  if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 310, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-  /* "serialhdl.pyx":302
+  /* "serialhdl.pyx":300
  * 
  * # Attempt an arduino style reset on a serial port
  * def arduino_reset(serialport, reactor):             # <<<<<<<<<<<<<<
@@ -12331,7 +12195,6 @@ static struct PyModuleDef __pyx_moduledef = {
 
 static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_BITS_PER_BYTE, __pyx_k_BITS_PER_BYTE, sizeof(__pyx_k_BITS_PER_BYTE), 0, 0, 1, 1},
-  {&__pyx_kp_u_Connection_took, __pyx_k_Connection_took, sizeof(__pyx_k_Connection_took), 0, 1, 0, 0},
   {&__pyx_kp_u_Dumping_receive_queue, __pyx_k_Dumping_receive_queue, sizeof(__pyx_k_Dumping_receive_queue), 0, 1, 0, 0},
   {&__pyx_kp_u_Dumping_send_queue, __pyx_k_Dumping_send_queue, sizeof(__pyx_k_Dumping_send_queue), 0, 1, 0, 0},
   {&__pyx_kp_u_Dumping_serial_stats, __pyx_k_Dumping_serial_stats, sizeof(__pyx_k_Dumping_serial_stats), 0, 1, 0, 0},
@@ -12539,7 +12402,6 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_kp_u_s_s, __pyx_k_s_s, sizeof(__pyx_k_s_s), 0, 1, 0, 0},
   {&__pyx_n_s_scount, __pyx_k_scount, sizeof(__pyx_k_scount), 0, 0, 1, 1},
   {&__pyx_n_s_sdata, __pyx_k_sdata, sizeof(__pyx_k_sdata), 0, 0, 1, 1},
-  {&__pyx_kp_u_seconds, __pyx_k_seconds, sizeof(__pyx_k_seconds), 0, 1, 0, 0},
   {&__pyx_n_s_self, __pyx_k_self, sizeof(__pyx_k_self), 0, 0, 1, 1},
   {&__pyx_n_s_send, __pyx_k_send, sizeof(__pyx_k_send), 0, 0, 1, 1},
   {&__pyx_n_s_send_with_response, __pyx_k_send_with_response, sizeof(__pyx_k_send_with_response), 0, 0, 1, 1},
@@ -12589,7 +12451,7 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedBuiltins(void) {
   __pyx_builtin_open = __Pyx_GetBuiltinName(__pyx_n_s_open); if (!__pyx_builtin_open) __PYX_ERR(0, 94, __pyx_L1_error)
   __pyx_builtin_OSError = __Pyx_GetBuiltinName(__pyx_n_s_OSError); if (!__pyx_builtin_OSError) __PYX_ERR(0, 95, __pyx_L1_error)
   __pyx_builtin_IOError = __Pyx_GetBuiltinName(__pyx_n_s_IOError); if (!__pyx_builtin_IOError) __PYX_ERR(0, 95, __pyx_L1_error)
-  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 204, __pyx_L1_error)
+  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 202, __pyx_L1_error)
   return 0;
   __pyx_L1_error:;
   return -1;
@@ -12610,25 +12472,25 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple_);
   __Pyx_GIVEREF(__pyx_tuple_);
 
-  /* "serialhdl.pyx":119
+  /* "serialhdl.pyx":117
  *         self.register_response(self.handle_unknown, '#unknown')
  *         # Setup baud adjust
  *         mcu_baud = msgparser.get_constant_float('SERIAL_BAUD', None)             # <<<<<<<<<<<<<<
  *         if mcu_baud is not None:
  *             baud_adjust = self.BITS_PER_BYTE / mcu_baud
  */
-  __pyx_tuple__3 = PyTuple_Pack(2, __pyx_n_u_SERIAL_BAUD, Py_None); if (unlikely(!__pyx_tuple__3)) __PYX_ERR(0, 119, __pyx_L1_error)
+  __pyx_tuple__3 = PyTuple_Pack(2, __pyx_n_u_SERIAL_BAUD, Py_None); if (unlikely(!__pyx_tuple__3)) __PYX_ERR(0, 117, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__3);
   __Pyx_GIVEREF(__pyx_tuple__3);
 
-  /* "serialhdl.pyx":124
+  /* "serialhdl.pyx":122
  *             self.ffi_lib.serialqueue_set_baud_adjust(
  *                 self.serialqueue, baud_adjust)
  *         receive_window = msgparser.get_constant_int('RECEIVE_WINDOW', None)             # <<<<<<<<<<<<<<
  *         if receive_window is not None:
  *             self.ffi_lib.serialqueue_set_receive_window(
  */
-  __pyx_tuple__4 = PyTuple_Pack(2, __pyx_n_u_RECEIVE_WINDOW, Py_None); if (unlikely(!__pyx_tuple__4)) __PYX_ERR(0, 124, __pyx_L1_error)
+  __pyx_tuple__4 = PyTuple_Pack(2, __pyx_n_u_RECEIVE_WINDOW, Py_None); if (unlikely(!__pyx_tuple__4)) __PYX_ERR(0, 122, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__4);
   __Pyx_GIVEREF(__pyx_tuple__4);
 
@@ -12678,325 +12540,325 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
  *         # Initial connection
  *         logging.info("Starting serial connect")
  */
-  __pyx_tuple__17 = PyTuple_Pack(11, __pyx_n_s_self, __pyx_n_s_start_time, __pyx_n_s_connect_time, __pyx_n_s_e, __pyx_n_s_start, __pyx_n_s_completion, __pyx_n_s_identify_data, __pyx_n_s_msgparser, __pyx_n_s_mcu_baud, __pyx_n_s_baud_adjust, __pyx_n_s_receive_window); if (unlikely(!__pyx_tuple__17)) __PYX_ERR(0, 78, __pyx_L1_error)
+  __pyx_tuple__17 = PyTuple_Pack(10, __pyx_n_s_self, __pyx_n_s_start_time, __pyx_n_s_connect_time, __pyx_n_s_e, __pyx_n_s_completion, __pyx_n_s_identify_data, __pyx_n_s_msgparser, __pyx_n_s_mcu_baud, __pyx_n_s_baud_adjust, __pyx_n_s_receive_window); if (unlikely(!__pyx_tuple__17)) __PYX_ERR(0, 78, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__17);
   __Pyx_GIVEREF(__pyx_tuple__17);
-  __pyx_codeobj__18 = (PyObject*)__Pyx_PyCode_New(1, 0, 11, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__17, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_connect, 78, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__18)) __PYX_ERR(0, 78, __pyx_L1_error)
+  __pyx_codeobj__18 = (PyObject*)__Pyx_PyCode_New(1, 0, 10, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__17, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_connect, 78, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__18)) __PYX_ERR(0, 78, __pyx_L1_error)
 
-  /* "serialhdl.pyx":128
+  /* "serialhdl.pyx":126
  *             self.ffi_lib.serialqueue_set_receive_window(
  *                 self.serialqueue, receive_window)
  *     def connect_file(self, debugoutput, dictionary, pace=False):             # <<<<<<<<<<<<<<
  *         self.ser = debugoutput
  *         self.msgparser.process_identify(dictionary, decompress=False)
  */
-  __pyx_tuple__19 = PyTuple_Pack(4, __pyx_n_s_self, __pyx_n_s_debugoutput, __pyx_n_s_dictionary, __pyx_n_s_pace); if (unlikely(!__pyx_tuple__19)) __PYX_ERR(0, 128, __pyx_L1_error)
+  __pyx_tuple__19 = PyTuple_Pack(4, __pyx_n_s_self, __pyx_n_s_debugoutput, __pyx_n_s_dictionary, __pyx_n_s_pace); if (unlikely(!__pyx_tuple__19)) __PYX_ERR(0, 126, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__19);
   __Pyx_GIVEREF(__pyx_tuple__19);
-  __pyx_codeobj__20 = (PyObject*)__Pyx_PyCode_New(4, 0, 4, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__19, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_connect_file, 128, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__20)) __PYX_ERR(0, 128, __pyx_L1_error)
-  __pyx_tuple__21 = PyTuple_Pack(1, ((PyObject *)Py_False)); if (unlikely(!__pyx_tuple__21)) __PYX_ERR(0, 128, __pyx_L1_error)
+  __pyx_codeobj__20 = (PyObject*)__Pyx_PyCode_New(4, 0, 4, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__19, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_connect_file, 126, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__20)) __PYX_ERR(0, 126, __pyx_L1_error)
+  __pyx_tuple__21 = PyTuple_Pack(1, ((PyObject *)Py_False)); if (unlikely(!__pyx_tuple__21)) __PYX_ERR(0, 126, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__21);
   __Pyx_GIVEREF(__pyx_tuple__21);
 
-  /* "serialhdl.pyx":132
+  /* "serialhdl.pyx":130
  *         self.msgparser.process_identify(dictionary, decompress=False)
  *         self.serialqueue = self.ffi_lib.serialqueue_alloc(self.ser.fileno(), 1)
  *     def set_clock_est(self, freq, last_time, last_clock):             # <<<<<<<<<<<<<<
  *         self.ffi_lib.serialqueue_set_clock_est(
  *             self.serialqueue, freq, last_time, last_clock)
  */
-  __pyx_tuple__22 = PyTuple_Pack(4, __pyx_n_s_self, __pyx_n_s_freq, __pyx_n_s_last_time, __pyx_n_s_last_clock); if (unlikely(!__pyx_tuple__22)) __PYX_ERR(0, 132, __pyx_L1_error)
+  __pyx_tuple__22 = PyTuple_Pack(4, __pyx_n_s_self, __pyx_n_s_freq, __pyx_n_s_last_time, __pyx_n_s_last_clock); if (unlikely(!__pyx_tuple__22)) __PYX_ERR(0, 130, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__22);
   __Pyx_GIVEREF(__pyx_tuple__22);
-  __pyx_codeobj__23 = (PyObject*)__Pyx_PyCode_New(4, 0, 4, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__22, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_set_clock_est, 132, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__23)) __PYX_ERR(0, 132, __pyx_L1_error)
+  __pyx_codeobj__23 = (PyObject*)__Pyx_PyCode_New(4, 0, 4, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__22, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_set_clock_est, 130, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__23)) __PYX_ERR(0, 130, __pyx_L1_error)
 
-  /* "serialhdl.pyx":135
+  /* "serialhdl.pyx":133
  *         self.ffi_lib.serialqueue_set_clock_est(
  *             self.serialqueue, freq, last_time, last_clock)
  *     def disconnect(self):             # <<<<<<<<<<<<<<
  *         if self.serialqueue is not None:
  *             self.ffi_lib.serialqueue_exit(self.serialqueue)
  */
-  __pyx_tuple__24 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_pn); if (unlikely(!__pyx_tuple__24)) __PYX_ERR(0, 135, __pyx_L1_error)
+  __pyx_tuple__24 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_pn); if (unlikely(!__pyx_tuple__24)) __PYX_ERR(0, 133, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__24);
   __Pyx_GIVEREF(__pyx_tuple__24);
-  __pyx_codeobj__25 = (PyObject*)__Pyx_PyCode_New(1, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__24, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_disconnect, 135, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__25)) __PYX_ERR(0, 135, __pyx_L1_error)
+  __pyx_codeobj__25 = (PyObject*)__Pyx_PyCode_New(1, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__24, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_disconnect, 133, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__25)) __PYX_ERR(0, 133, __pyx_L1_error)
 
-  /* "serialhdl.pyx":148
+  /* "serialhdl.pyx":146
  *             pn.complete(None)
  *         self.pending_notifications.clear()
  *     def stats(self, eventtime):             # <<<<<<<<<<<<<<
  *         if self.serialqueue is None:
  *             return ""
  */
-  __pyx_tuple__26 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_eventtime); if (unlikely(!__pyx_tuple__26)) __PYX_ERR(0, 148, __pyx_L1_error)
+  __pyx_tuple__26 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_eventtime); if (unlikely(!__pyx_tuple__26)) __PYX_ERR(0, 146, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__26);
   __Pyx_GIVEREF(__pyx_tuple__26);
-  __pyx_codeobj__27 = (PyObject*)__Pyx_PyCode_New(2, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__26, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_stats, 148, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__27)) __PYX_ERR(0, 148, __pyx_L1_error)
+  __pyx_codeobj__27 = (PyObject*)__Pyx_PyCode_New(2, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__26, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_stats, 146, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__27)) __PYX_ERR(0, 146, __pyx_L1_error)
 
-  /* "serialhdl.pyx":154
+  /* "serialhdl.pyx":152
  *             self.serialqueue, self.stats_buf, len(self.stats_buf))
  *         return self.ffi_main.string(self.stats_buf).decode()
  *     def get_reactor(self):             # <<<<<<<<<<<<<<
  *         return self.reactor
  *     def get_msgparser(self):
  */
-  __pyx_tuple__28 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__28)) __PYX_ERR(0, 154, __pyx_L1_error)
+  __pyx_tuple__28 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__28)) __PYX_ERR(0, 152, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__28);
   __Pyx_GIVEREF(__pyx_tuple__28);
-  __pyx_codeobj__29 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__28, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_get_reactor, 154, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__29)) __PYX_ERR(0, 154, __pyx_L1_error)
+  __pyx_codeobj__29 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__28, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_get_reactor, 152, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__29)) __PYX_ERR(0, 152, __pyx_L1_error)
 
-  /* "serialhdl.pyx":156
+  /* "serialhdl.pyx":154
  *     def get_reactor(self):
  *         return self.reactor
  *     def get_msgparser(self):             # <<<<<<<<<<<<<<
  *         return self.msgparser
  *     def get_default_command_queue(self):
  */
-  __pyx_tuple__30 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__30)) __PYX_ERR(0, 156, __pyx_L1_error)
+  __pyx_tuple__30 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__30)) __PYX_ERR(0, 154, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__30);
   __Pyx_GIVEREF(__pyx_tuple__30);
-  __pyx_codeobj__31 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__30, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_get_msgparser, 156, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__31)) __PYX_ERR(0, 156, __pyx_L1_error)
+  __pyx_codeobj__31 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__30, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_get_msgparser, 154, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__31)) __PYX_ERR(0, 154, __pyx_L1_error)
 
-  /* "serialhdl.pyx":158
+  /* "serialhdl.pyx":156
  *     def get_msgparser(self):
  *         return self.msgparser
  *     def get_default_command_queue(self):             # <<<<<<<<<<<<<<
  *         return self.default_cmd_queue
  *     # Serial response callbacks
  */
-  __pyx_tuple__32 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__32)) __PYX_ERR(0, 158, __pyx_L1_error)
+  __pyx_tuple__32 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__32)) __PYX_ERR(0, 156, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__32);
   __Pyx_GIVEREF(__pyx_tuple__32);
-  __pyx_codeobj__33 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__32, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_get_default_command_queue, 158, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__33)) __PYX_ERR(0, 158, __pyx_L1_error)
+  __pyx_codeobj__33 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__32, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_get_default_command_queue, 156, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__33)) __PYX_ERR(0, 156, __pyx_L1_error)
 
-  /* "serialhdl.pyx":161
+  /* "serialhdl.pyx":159
  *         return self.default_cmd_queue
  *     # Serial response callbacks
  *     def register_response(self, callback, name, oid=None):             # <<<<<<<<<<<<<<
  *         with self.lock:
  *             if callback is None:
  */
-  __pyx_tuple__34 = PyTuple_Pack(4, __pyx_n_s_self, __pyx_n_s_callback, __pyx_n_s_name_2, __pyx_n_s_oid); if (unlikely(!__pyx_tuple__34)) __PYX_ERR(0, 161, __pyx_L1_error)
+  __pyx_tuple__34 = PyTuple_Pack(4, __pyx_n_s_self, __pyx_n_s_callback, __pyx_n_s_name_2, __pyx_n_s_oid); if (unlikely(!__pyx_tuple__34)) __PYX_ERR(0, 159, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__34);
   __Pyx_GIVEREF(__pyx_tuple__34);
-  __pyx_codeobj__35 = (PyObject*)__Pyx_PyCode_New(4, 0, 4, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__34, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_register_response, 161, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__35)) __PYX_ERR(0, 161, __pyx_L1_error)
-  __pyx_tuple__36 = PyTuple_Pack(1, ((PyObject *)Py_None)); if (unlikely(!__pyx_tuple__36)) __PYX_ERR(0, 161, __pyx_L1_error)
+  __pyx_codeobj__35 = (PyObject*)__Pyx_PyCode_New(4, 0, 4, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__34, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_register_response, 159, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__35)) __PYX_ERR(0, 159, __pyx_L1_error)
+  __pyx_tuple__36 = PyTuple_Pack(1, ((PyObject *)Py_None)); if (unlikely(!__pyx_tuple__36)) __PYX_ERR(0, 159, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__36);
   __Pyx_GIVEREF(__pyx_tuple__36);
 
-  /* "serialhdl.pyx":168
+  /* "serialhdl.pyx":166
  *                 self.handlers[name, oid] = callback
  *     # Command sending
  *     def raw_send(self, cmd, minclock, reqclock, cmd_queue):             # <<<<<<<<<<<<<<
  *         self.ffi_lib.serialqueue_send(self.serialqueue, cmd_queue,
  *                                       cmd, len(cmd), minclock, reqclock, 0)
  */
-  __pyx_tuple__37 = PyTuple_Pack(5, __pyx_n_s_self, __pyx_n_s_cmd, __pyx_n_s_minclock, __pyx_n_s_reqclock, __pyx_n_s_cmd_queue); if (unlikely(!__pyx_tuple__37)) __PYX_ERR(0, 168, __pyx_L1_error)
+  __pyx_tuple__37 = PyTuple_Pack(5, __pyx_n_s_self, __pyx_n_s_cmd, __pyx_n_s_minclock, __pyx_n_s_reqclock, __pyx_n_s_cmd_queue); if (unlikely(!__pyx_tuple__37)) __PYX_ERR(0, 166, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__37);
   __Pyx_GIVEREF(__pyx_tuple__37);
-  __pyx_codeobj__38 = (PyObject*)__Pyx_PyCode_New(5, 0, 5, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__37, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_raw_send, 168, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__38)) __PYX_ERR(0, 168, __pyx_L1_error)
+  __pyx_codeobj__38 = (PyObject*)__Pyx_PyCode_New(5, 0, 5, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__37, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_raw_send, 166, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__38)) __PYX_ERR(0, 166, __pyx_L1_error)
 
-  /* "serialhdl.pyx":171
+  /* "serialhdl.pyx":169
  *         self.ffi_lib.serialqueue_send(self.serialqueue, cmd_queue,
  *                                       cmd, len(cmd), minclock, reqclock, 0)
  *     def raw_send_wait_ack(self, cmd, minclock, reqclock, cmd_queue):             # <<<<<<<<<<<<<<
  *         self.last_notify_id += 1
  *         nid = self.last_notify_id
  */
-  __pyx_tuple__39 = PyTuple_Pack(8, __pyx_n_s_self, __pyx_n_s_cmd, __pyx_n_s_minclock, __pyx_n_s_reqclock, __pyx_n_s_cmd_queue, __pyx_n_s_nid, __pyx_n_s_completion, __pyx_n_s_params); if (unlikely(!__pyx_tuple__39)) __PYX_ERR(0, 171, __pyx_L1_error)
+  __pyx_tuple__39 = PyTuple_Pack(8, __pyx_n_s_self, __pyx_n_s_cmd, __pyx_n_s_minclock, __pyx_n_s_reqclock, __pyx_n_s_cmd_queue, __pyx_n_s_nid, __pyx_n_s_completion, __pyx_n_s_params); if (unlikely(!__pyx_tuple__39)) __PYX_ERR(0, 169, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__39);
   __Pyx_GIVEREF(__pyx_tuple__39);
-  __pyx_codeobj__40 = (PyObject*)__Pyx_PyCode_New(5, 0, 8, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__39, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_raw_send_wait_ack, 171, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__40)) __PYX_ERR(0, 171, __pyx_L1_error)
+  __pyx_codeobj__40 = (PyObject*)__Pyx_PyCode_New(5, 0, 8, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__39, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_raw_send_wait_ack, 169, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__40)) __PYX_ERR(0, 169, __pyx_L1_error)
 
-  /* "serialhdl.pyx":182
+  /* "serialhdl.pyx":180
  *             raise error("Serial connection closed")
  *         return params
  *     def send(self, msg, minclock=0, reqclock=0):             # <<<<<<<<<<<<<<
  *         cmd = self.msgparser.create_command(msg)
  *         self.raw_send(cmd, minclock, reqclock, self.default_cmd_queue)
  */
-  __pyx_tuple__41 = PyTuple_Pack(5, __pyx_n_s_self, __pyx_n_s_msg, __pyx_n_s_minclock, __pyx_n_s_reqclock, __pyx_n_s_cmd); if (unlikely(!__pyx_tuple__41)) __PYX_ERR(0, 182, __pyx_L1_error)
+  __pyx_tuple__41 = PyTuple_Pack(5, __pyx_n_s_self, __pyx_n_s_msg, __pyx_n_s_minclock, __pyx_n_s_reqclock, __pyx_n_s_cmd); if (unlikely(!__pyx_tuple__41)) __PYX_ERR(0, 180, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__41);
   __Pyx_GIVEREF(__pyx_tuple__41);
-  __pyx_codeobj__42 = (PyObject*)__Pyx_PyCode_New(4, 0, 5, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__41, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_send, 182, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__42)) __PYX_ERR(0, 182, __pyx_L1_error)
-  __pyx_tuple__43 = PyTuple_Pack(2, ((PyObject *)__pyx_int_0), ((PyObject *)__pyx_int_0)); if (unlikely(!__pyx_tuple__43)) __PYX_ERR(0, 182, __pyx_L1_error)
+  __pyx_codeobj__42 = (PyObject*)__Pyx_PyCode_New(4, 0, 5, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__41, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_send, 180, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__42)) __PYX_ERR(0, 180, __pyx_L1_error)
+  __pyx_tuple__43 = PyTuple_Pack(2, ((PyObject *)__pyx_int_0), ((PyObject *)__pyx_int_0)); if (unlikely(!__pyx_tuple__43)) __PYX_ERR(0, 180, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__43);
   __Pyx_GIVEREF(__pyx_tuple__43);
 
-  /* "serialhdl.pyx":185
+  /* "serialhdl.pyx":183
  *         cmd = self.msgparser.create_command(msg)
  *         self.raw_send(cmd, minclock, reqclock, self.default_cmd_queue)
  *     def send_with_response(self, msg, response):             # <<<<<<<<<<<<<<
  *         cmd = self.msgparser.create_command(msg)
  *         src = SerialRetryCommand(self, response)
  */
-  __pyx_tuple__44 = PyTuple_Pack(5, __pyx_n_s_self, __pyx_n_s_msg, __pyx_n_s_response, __pyx_n_s_cmd, __pyx_n_s_src); if (unlikely(!__pyx_tuple__44)) __PYX_ERR(0, 185, __pyx_L1_error)
+  __pyx_tuple__44 = PyTuple_Pack(5, __pyx_n_s_self, __pyx_n_s_msg, __pyx_n_s_response, __pyx_n_s_cmd, __pyx_n_s_src); if (unlikely(!__pyx_tuple__44)) __PYX_ERR(0, 183, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__44);
   __Pyx_GIVEREF(__pyx_tuple__44);
-  __pyx_codeobj__45 = (PyObject*)__Pyx_PyCode_New(3, 0, 5, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__44, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_send_with_response, 185, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__45)) __PYX_ERR(0, 185, __pyx_L1_error)
+  __pyx_codeobj__45 = (PyObject*)__Pyx_PyCode_New(3, 0, 5, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__44, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_send_with_response, 183, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__45)) __PYX_ERR(0, 183, __pyx_L1_error)
 
-  /* "serialhdl.pyx":189
+  /* "serialhdl.pyx":187
  *         src = SerialRetryCommand(self, response)
  *         return src.get_response(cmd, self.default_cmd_queue)
  *     def alloc_command_queue(self):             # <<<<<<<<<<<<<<
  *         return self.ffi_main.gc(self.ffi_lib.serialqueue_alloc_commandqueue(),
  *                                 self.ffi_lib.serialqueue_free_commandqueue)
  */
-  __pyx_tuple__46 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__46)) __PYX_ERR(0, 189, __pyx_L1_error)
+  __pyx_tuple__46 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__46)) __PYX_ERR(0, 187, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__46);
   __Pyx_GIVEREF(__pyx_tuple__46);
-  __pyx_codeobj__47 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__46, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_alloc_command_queue, 189, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__47)) __PYX_ERR(0, 189, __pyx_L1_error)
+  __pyx_codeobj__47 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__46, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_alloc_command_queue, 187, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__47)) __PYX_ERR(0, 187, __pyx_L1_error)
 
-  /* "serialhdl.pyx":193
+  /* "serialhdl.pyx":191
  *                                 self.ffi_lib.serialqueue_free_commandqueue)
  *     # Dumping debug lists
  *     def dump_debug(self):             # <<<<<<<<<<<<<<
  *         out = []
  *         out.append("Dumping serial stats: %s" % (
  */
-  __pyx_tuple__48 = PyTuple_Pack(9, __pyx_n_s_self, __pyx_n_s_out, __pyx_n_s_sdata, __pyx_n_s_rdata, __pyx_n_s_scount, __pyx_n_s_rcount, __pyx_n_s_i, __pyx_n_s_msg, __pyx_n_s_cmds); if (unlikely(!__pyx_tuple__48)) __PYX_ERR(0, 193, __pyx_L1_error)
+  __pyx_tuple__48 = PyTuple_Pack(9, __pyx_n_s_self, __pyx_n_s_out, __pyx_n_s_sdata, __pyx_n_s_rdata, __pyx_n_s_scount, __pyx_n_s_rcount, __pyx_n_s_i, __pyx_n_s_msg, __pyx_n_s_cmds); if (unlikely(!__pyx_tuple__48)) __PYX_ERR(0, 191, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__48);
   __Pyx_GIVEREF(__pyx_tuple__48);
-  __pyx_codeobj__49 = (PyObject*)__Pyx_PyCode_New(1, 0, 9, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__48, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_dump_debug, 193, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__49)) __PYX_ERR(0, 193, __pyx_L1_error)
+  __pyx_codeobj__49 = (PyObject*)__Pyx_PyCode_New(1, 0, 9, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__48, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_dump_debug, 191, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__49)) __PYX_ERR(0, 191, __pyx_L1_error)
 
-  /* "serialhdl.pyx":217
+  /* "serialhdl.pyx":215
  *         return '\n'.join(out)
  *     # Default message handlers
  *     def _handle_unknown_init(self, params):             # <<<<<<<<<<<<<<
  *         logging.debug("Unknown message %d (len %d) while identifying",
  *                       params['#msgid'], len(params['#msg']))
  */
-  __pyx_tuple__50 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_params); if (unlikely(!__pyx_tuple__50)) __PYX_ERR(0, 217, __pyx_L1_error)
+  __pyx_tuple__50 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_params); if (unlikely(!__pyx_tuple__50)) __PYX_ERR(0, 215, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__50);
   __Pyx_GIVEREF(__pyx_tuple__50);
-  __pyx_codeobj__51 = (PyObject*)__Pyx_PyCode_New(2, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__50, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_handle_unknown_init, 217, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__51)) __PYX_ERR(0, 217, __pyx_L1_error)
+  __pyx_codeobj__51 = (PyObject*)__Pyx_PyCode_New(2, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__50, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_handle_unknown_init, 215, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__51)) __PYX_ERR(0, 215, __pyx_L1_error)
 
-  /* "serialhdl.pyx":220
+  /* "serialhdl.pyx":218
  *         logging.debug("Unknown message %d (len %d) while identifying",
  *                       params['#msgid'], len(params['#msg']))
  *     def handle_unknown(self, params):             # <<<<<<<<<<<<<<
  *         logging.warn("Unknown message type %d: %s",
  *                      params['#msgid'], repr(params['#msg']))
  */
-  __pyx_tuple__52 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_params); if (unlikely(!__pyx_tuple__52)) __PYX_ERR(0, 220, __pyx_L1_error)
+  __pyx_tuple__52 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_params); if (unlikely(!__pyx_tuple__52)) __PYX_ERR(0, 218, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__52);
   __Pyx_GIVEREF(__pyx_tuple__52);
-  __pyx_codeobj__53 = (PyObject*)__Pyx_PyCode_New(2, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__52, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_handle_unknown, 220, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__53)) __PYX_ERR(0, 220, __pyx_L1_error)
+  __pyx_codeobj__53 = (PyObject*)__Pyx_PyCode_New(2, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__52, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_handle_unknown, 218, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__53)) __PYX_ERR(0, 218, __pyx_L1_error)
 
-  /* "serialhdl.pyx":223
+  /* "serialhdl.pyx":221
  *         logging.warn("Unknown message type %d: %s",
  *                      params['#msgid'], repr(params['#msg']))
  *     def handle_output(self, params):             # <<<<<<<<<<<<<<
  *         logging.info("%s: %s", params['#name'], params['#msg'])
  *     def handle_default(self, params):
  */
-  __pyx_tuple__54 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_params); if (unlikely(!__pyx_tuple__54)) __PYX_ERR(0, 223, __pyx_L1_error)
+  __pyx_tuple__54 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_params); if (unlikely(!__pyx_tuple__54)) __PYX_ERR(0, 221, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__54);
   __Pyx_GIVEREF(__pyx_tuple__54);
-  __pyx_codeobj__55 = (PyObject*)__Pyx_PyCode_New(2, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__54, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_handle_output, 223, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__55)) __PYX_ERR(0, 223, __pyx_L1_error)
+  __pyx_codeobj__55 = (PyObject*)__Pyx_PyCode_New(2, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__54, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_handle_output, 221, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__55)) __PYX_ERR(0, 221, __pyx_L1_error)
 
-  /* "serialhdl.pyx":225
+  /* "serialhdl.pyx":223
  *     def handle_output(self, params):
  *         logging.info("%s: %s", params['#name'], params['#msg'])
  *     def handle_default(self, params):             # <<<<<<<<<<<<<<
  *         logging.warn("got %s", params)
  *     def __del__(self):
  */
-  __pyx_tuple__56 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_params); if (unlikely(!__pyx_tuple__56)) __PYX_ERR(0, 225, __pyx_L1_error)
+  __pyx_tuple__56 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_params); if (unlikely(!__pyx_tuple__56)) __PYX_ERR(0, 223, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__56);
   __Pyx_GIVEREF(__pyx_tuple__56);
-  __pyx_codeobj__57 = (PyObject*)__Pyx_PyCode_New(2, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__56, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_handle_default, 225, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__57)) __PYX_ERR(0, 225, __pyx_L1_error)
+  __pyx_codeobj__57 = (PyObject*)__Pyx_PyCode_New(2, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__56, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_handle_default, 223, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__57)) __PYX_ERR(0, 223, __pyx_L1_error)
 
-  /* "serialhdl.pyx":227
+  /* "serialhdl.pyx":225
  *     def handle_default(self, params):
  *         logging.warn("got %s", params)
  *     def __del__(self):             # <<<<<<<<<<<<<<
  *         self.disconnect()
  * 
  */
-  __pyx_tuple__58 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__58)) __PYX_ERR(0, 227, __pyx_L1_error)
+  __pyx_tuple__58 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__58)) __PYX_ERR(0, 225, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__58);
   __Pyx_GIVEREF(__pyx_tuple__58);
-  __pyx_codeobj__59 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__58, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_del, 227, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__59)) __PYX_ERR(0, 227, __pyx_L1_error)
+  __pyx_codeobj__59 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__58, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_del, 225, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__59)) __PYX_ERR(0, 225, __pyx_L1_error)
 
-  /* "serialhdl.pyx":232
+  /* "serialhdl.pyx":230
  * # Class to send a query command and return the received response
  * class SerialRetryCommand:
  *     def __init__(self, serial, name, oid=None):             # <<<<<<<<<<<<<<
  *         self.serial = serial
  *         self.name = name
  */
-  __pyx_tuple__60 = PyTuple_Pack(4, __pyx_n_s_self, __pyx_n_s_serial, __pyx_n_s_name_2, __pyx_n_s_oid); if (unlikely(!__pyx_tuple__60)) __PYX_ERR(0, 232, __pyx_L1_error)
+  __pyx_tuple__60 = PyTuple_Pack(4, __pyx_n_s_self, __pyx_n_s_serial, __pyx_n_s_name_2, __pyx_n_s_oid); if (unlikely(!__pyx_tuple__60)) __PYX_ERR(0, 230, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__60);
   __Pyx_GIVEREF(__pyx_tuple__60);
-  __pyx_codeobj__61 = (PyObject*)__Pyx_PyCode_New(4, 0, 4, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__60, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_init, 232, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__61)) __PYX_ERR(0, 232, __pyx_L1_error)
-  __pyx_tuple__62 = PyTuple_Pack(1, ((PyObject *)Py_None)); if (unlikely(!__pyx_tuple__62)) __PYX_ERR(0, 232, __pyx_L1_error)
+  __pyx_codeobj__61 = (PyObject*)__Pyx_PyCode_New(4, 0, 4, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__60, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_init, 230, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__61)) __PYX_ERR(0, 230, __pyx_L1_error)
+  __pyx_tuple__62 = PyTuple_Pack(1, ((PyObject *)Py_None)); if (unlikely(!__pyx_tuple__62)) __PYX_ERR(0, 230, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__62);
   __Pyx_GIVEREF(__pyx_tuple__62);
 
-  /* "serialhdl.pyx":238
+  /* "serialhdl.pyx":236
  *         self.last_params = None
  *         self.serial.register_response(self.handle_callback, name, oid)
  *     def handle_callback(self, params):             # <<<<<<<<<<<<<<
  *         self.last_params = params
  *     def get_response(self, cmd, cmd_queue, minclock=0):
  */
-  __pyx_tuple__63 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_params); if (unlikely(!__pyx_tuple__63)) __PYX_ERR(0, 238, __pyx_L1_error)
+  __pyx_tuple__63 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_params); if (unlikely(!__pyx_tuple__63)) __PYX_ERR(0, 236, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__63);
   __Pyx_GIVEREF(__pyx_tuple__63);
-  __pyx_codeobj__64 = (PyObject*)__Pyx_PyCode_New(2, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__63, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_handle_callback, 238, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__64)) __PYX_ERR(0, 238, __pyx_L1_error)
+  __pyx_codeobj__64 = (PyObject*)__Pyx_PyCode_New(2, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__63, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_handle_callback, 236, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__64)) __PYX_ERR(0, 236, __pyx_L1_error)
 
-  /* "serialhdl.pyx":240
+  /* "serialhdl.pyx":238
  *     def handle_callback(self, params):
  *         self.last_params = params
  *     def get_response(self, cmd, cmd_queue, minclock=0):             # <<<<<<<<<<<<<<
  *         retries = 5
  *         retry_delay = .010
  */
-  __pyx_tuple__65 = PyTuple_Pack(8, __pyx_n_s_self, __pyx_n_s_cmd, __pyx_n_s_cmd_queue, __pyx_n_s_minclock, __pyx_n_s_retries, __pyx_n_s_retry_delay, __pyx_n_s_params, __pyx_n_s_reactor); if (unlikely(!__pyx_tuple__65)) __PYX_ERR(0, 240, __pyx_L1_error)
+  __pyx_tuple__65 = PyTuple_Pack(8, __pyx_n_s_self, __pyx_n_s_cmd, __pyx_n_s_cmd_queue, __pyx_n_s_minclock, __pyx_n_s_retries, __pyx_n_s_retry_delay, __pyx_n_s_params, __pyx_n_s_reactor); if (unlikely(!__pyx_tuple__65)) __PYX_ERR(0, 238, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__65);
   __Pyx_GIVEREF(__pyx_tuple__65);
-  __pyx_codeobj__66 = (PyObject*)__Pyx_PyCode_New(4, 0, 8, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__65, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_get_response, 240, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__66)) __PYX_ERR(0, 240, __pyx_L1_error)
-  __pyx_tuple__67 = PyTuple_Pack(1, ((PyObject *)__pyx_int_0)); if (unlikely(!__pyx_tuple__67)) __PYX_ERR(0, 240, __pyx_L1_error)
+  __pyx_codeobj__66 = (PyObject*)__Pyx_PyCode_New(4, 0, 8, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__65, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_get_response, 238, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__66)) __PYX_ERR(0, 238, __pyx_L1_error)
+  __pyx_tuple__67 = PyTuple_Pack(1, ((PyObject *)__pyx_int_0)); if (unlikely(!__pyx_tuple__67)) __PYX_ERR(0, 238, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__67);
   __Pyx_GIVEREF(__pyx_tuple__67);
 
-  /* "serialhdl.pyx":258
+  /* "serialhdl.pyx":256
  * 
  * # Attempt to place an AVR stk500v2 style programmer into normal mode
  * def stk500v2_leave(ser, reactor):             # <<<<<<<<<<<<<<
  *     logging.debug("Starting stk500v2 leave programmer sequence")
  *     util.clear_hupcl(ser.fileno())
  */
-  __pyx_tuple__68 = PyTuple_Pack(4, __pyx_n_s_ser, __pyx_n_s_reactor, __pyx_n_s_origbaud, __pyx_n_s_res); if (unlikely(!__pyx_tuple__68)) __PYX_ERR(0, 258, __pyx_L1_error)
+  __pyx_tuple__68 = PyTuple_Pack(4, __pyx_n_s_ser, __pyx_n_s_reactor, __pyx_n_s_origbaud, __pyx_n_s_res); if (unlikely(!__pyx_tuple__68)) __PYX_ERR(0, 256, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__68);
   __Pyx_GIVEREF(__pyx_tuple__68);
-  __pyx_codeobj__69 = (PyObject*)__Pyx_PyCode_New(2, 0, 4, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__68, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_stk500v2_leave, 258, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__69)) __PYX_ERR(0, 258, __pyx_L1_error)
+  __pyx_codeobj__69 = (PyObject*)__Pyx_PyCode_New(2, 0, 4, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__68, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_stk500v2_leave, 256, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__69)) __PYX_ERR(0, 256, __pyx_L1_error)
 
-  /* "serialhdl.pyx":275
+  /* "serialhdl.pyx":273
  *     ser.baudrate = origbaud
  * 
  * def cheetah_reset(serialport, reactor):             # <<<<<<<<<<<<<<
  *     # Fysetc Cheetah v1.2 boards have a weird stateful circuitry for
  *     # configuring the bootloader. This sequence takes care of disabling it for
  */
-  __pyx_tuple__70 = PyTuple_Pack(3, __pyx_n_s_serialport, __pyx_n_s_reactor, __pyx_n_s_ser); if (unlikely(!__pyx_tuple__70)) __PYX_ERR(0, 275, __pyx_L1_error)
+  __pyx_tuple__70 = PyTuple_Pack(3, __pyx_n_s_serialport, __pyx_n_s_reactor, __pyx_n_s_ser); if (unlikely(!__pyx_tuple__70)) __PYX_ERR(0, 273, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__70);
   __Pyx_GIVEREF(__pyx_tuple__70);
-  __pyx_codeobj__71 = (PyObject*)__Pyx_PyCode_New(2, 0, 3, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__70, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_cheetah_reset, 275, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__71)) __PYX_ERR(0, 275, __pyx_L1_error)
+  __pyx_codeobj__71 = (PyObject*)__Pyx_PyCode_New(2, 0, 3, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__70, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_cheetah_reset, 273, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__71)) __PYX_ERR(0, 273, __pyx_L1_error)
 
-  /* "serialhdl.pyx":302
+  /* "serialhdl.pyx":300
  * 
  * # Attempt an arduino style reset on a serial port
  * def arduino_reset(serialport, reactor):             # <<<<<<<<<<<<<<
  *     # First try opening the port at a different baud
  *     ser = serial.Serial(serialport, 2400, timeout=0, exclusive=True)
  */
-  __pyx_tuple__72 = PyTuple_Pack(3, __pyx_n_s_serialport, __pyx_n_s_reactor, __pyx_n_s_ser); if (unlikely(!__pyx_tuple__72)) __PYX_ERR(0, 302, __pyx_L1_error)
+  __pyx_tuple__72 = PyTuple_Pack(3, __pyx_n_s_serialport, __pyx_n_s_reactor, __pyx_n_s_ser); if (unlikely(!__pyx_tuple__72)) __PYX_ERR(0, 300, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__72);
   __Pyx_GIVEREF(__pyx_tuple__72);
-  __pyx_codeobj__73 = (PyObject*)__Pyx_PyCode_New(2, 0, 3, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__72, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_arduino_reset, 302, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__73)) __PYX_ERR(0, 302, __pyx_L1_error)
+  __pyx_codeobj__73 = (PyObject*)__Pyx_PyCode_New(2, 0, 3, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__72, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_serialhdl_pyx, __pyx_n_s_arduino_reset, 300, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__73)) __PYX_ERR(0, 300, __pyx_L1_error)
   __Pyx_RefNannyFinishContext();
   return 0;
   __pyx_L1_error:;
@@ -13427,235 +13289,235 @@ if (!__Pyx_RefNanny) {
   if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_connect, __pyx_t_2) < 0) __PYX_ERR(0, 78, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":128
+  /* "serialhdl.pyx":126
  *             self.ffi_lib.serialqueue_set_receive_window(
  *                 self.serialqueue, receive_window)
  *     def connect_file(self, debugoutput, dictionary, pace=False):             # <<<<<<<<<<<<<<
  *         self.ser = debugoutput
  *         self.msgparser.process_identify(dictionary, decompress=False)
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_9connect_file, 0, __pyx_n_s_SerialReader_connect_file, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__20)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 128, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_9connect_file, 0, __pyx_n_s_SerialReader_connect_file, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__20)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 126, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_CyFunction_SetDefaultsTuple(__pyx_t_2, __pyx_tuple__21);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_connect_file, __pyx_t_2) < 0) __PYX_ERR(0, 128, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_connect_file, __pyx_t_2) < 0) __PYX_ERR(0, 126, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":132
+  /* "serialhdl.pyx":130
  *         self.msgparser.process_identify(dictionary, decompress=False)
  *         self.serialqueue = self.ffi_lib.serialqueue_alloc(self.ser.fileno(), 1)
  *     def set_clock_est(self, freq, last_time, last_clock):             # <<<<<<<<<<<<<<
  *         self.ffi_lib.serialqueue_set_clock_est(
  *             self.serialqueue, freq, last_time, last_clock)
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_11set_clock_est, 0, __pyx_n_s_SerialReader_set_clock_est, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__23)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 132, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_11set_clock_est, 0, __pyx_n_s_SerialReader_set_clock_est, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__23)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 130, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_set_clock_est, __pyx_t_2) < 0) __PYX_ERR(0, 132, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_set_clock_est, __pyx_t_2) < 0) __PYX_ERR(0, 130, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":135
+  /* "serialhdl.pyx":133
  *         self.ffi_lib.serialqueue_set_clock_est(
  *             self.serialqueue, freq, last_time, last_clock)
  *     def disconnect(self):             # <<<<<<<<<<<<<<
  *         if self.serialqueue is not None:
  *             self.ffi_lib.serialqueue_exit(self.serialqueue)
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_13disconnect, 0, __pyx_n_s_SerialReader_disconnect, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__25)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 135, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_13disconnect, 0, __pyx_n_s_SerialReader_disconnect, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__25)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 133, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_disconnect, __pyx_t_2) < 0) __PYX_ERR(0, 135, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_disconnect, __pyx_t_2) < 0) __PYX_ERR(0, 133, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":148
+  /* "serialhdl.pyx":146
  *             pn.complete(None)
  *         self.pending_notifications.clear()
  *     def stats(self, eventtime):             # <<<<<<<<<<<<<<
  *         if self.serialqueue is None:
  *             return ""
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_15stats, 0, __pyx_n_s_SerialReader_stats, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__27)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 148, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_15stats, 0, __pyx_n_s_SerialReader_stats, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__27)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 146, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_stats, __pyx_t_2) < 0) __PYX_ERR(0, 148, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_stats, __pyx_t_2) < 0) __PYX_ERR(0, 146, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":154
+  /* "serialhdl.pyx":152
  *             self.serialqueue, self.stats_buf, len(self.stats_buf))
  *         return self.ffi_main.string(self.stats_buf).decode()
  *     def get_reactor(self):             # <<<<<<<<<<<<<<
  *         return self.reactor
  *     def get_msgparser(self):
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_17get_reactor, 0, __pyx_n_s_SerialReader_get_reactor, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__29)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 154, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_17get_reactor, 0, __pyx_n_s_SerialReader_get_reactor, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__29)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 152, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_get_reactor, __pyx_t_2) < 0) __PYX_ERR(0, 154, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_get_reactor, __pyx_t_2) < 0) __PYX_ERR(0, 152, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":156
+  /* "serialhdl.pyx":154
  *     def get_reactor(self):
  *         return self.reactor
  *     def get_msgparser(self):             # <<<<<<<<<<<<<<
  *         return self.msgparser
  *     def get_default_command_queue(self):
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_19get_msgparser, 0, __pyx_n_s_SerialReader_get_msgparser, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__31)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 156, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_19get_msgparser, 0, __pyx_n_s_SerialReader_get_msgparser, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__31)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 154, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_get_msgparser, __pyx_t_2) < 0) __PYX_ERR(0, 156, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_get_msgparser, __pyx_t_2) < 0) __PYX_ERR(0, 154, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":158
+  /* "serialhdl.pyx":156
  *     def get_msgparser(self):
  *         return self.msgparser
  *     def get_default_command_queue(self):             # <<<<<<<<<<<<<<
  *         return self.default_cmd_queue
  *     # Serial response callbacks
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_21get_default_command_queue, 0, __pyx_n_s_SerialReader_get_default_command, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__33)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 158, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_21get_default_command_queue, 0, __pyx_n_s_SerialReader_get_default_command, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__33)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 156, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_get_default_command_queue, __pyx_t_2) < 0) __PYX_ERR(0, 158, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_get_default_command_queue, __pyx_t_2) < 0) __PYX_ERR(0, 156, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":161
+  /* "serialhdl.pyx":159
  *         return self.default_cmd_queue
  *     # Serial response callbacks
  *     def register_response(self, callback, name, oid=None):             # <<<<<<<<<<<<<<
  *         with self.lock:
  *             if callback is None:
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_23register_response, 0, __pyx_n_s_SerialReader_register_response, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__35)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 161, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_23register_response, 0, __pyx_n_s_SerialReader_register_response, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__35)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 159, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_CyFunction_SetDefaultsTuple(__pyx_t_2, __pyx_tuple__36);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_register_response, __pyx_t_2) < 0) __PYX_ERR(0, 161, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_register_response, __pyx_t_2) < 0) __PYX_ERR(0, 159, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":168
+  /* "serialhdl.pyx":166
  *                 self.handlers[name, oid] = callback
  *     # Command sending
  *     def raw_send(self, cmd, minclock, reqclock, cmd_queue):             # <<<<<<<<<<<<<<
  *         self.ffi_lib.serialqueue_send(self.serialqueue, cmd_queue,
  *                                       cmd, len(cmd), minclock, reqclock, 0)
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_25raw_send, 0, __pyx_n_s_SerialReader_raw_send, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__38)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 168, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_25raw_send, 0, __pyx_n_s_SerialReader_raw_send, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__38)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 166, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_raw_send, __pyx_t_2) < 0) __PYX_ERR(0, 168, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_raw_send, __pyx_t_2) < 0) __PYX_ERR(0, 166, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":171
+  /* "serialhdl.pyx":169
  *         self.ffi_lib.serialqueue_send(self.serialqueue, cmd_queue,
  *                                       cmd, len(cmd), minclock, reqclock, 0)
  *     def raw_send_wait_ack(self, cmd, minclock, reqclock, cmd_queue):             # <<<<<<<<<<<<<<
  *         self.last_notify_id += 1
  *         nid = self.last_notify_id
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_27raw_send_wait_ack, 0, __pyx_n_s_SerialReader_raw_send_wait_ack, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__40)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 171, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_27raw_send_wait_ack, 0, __pyx_n_s_SerialReader_raw_send_wait_ack, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__40)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 169, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_raw_send_wait_ack, __pyx_t_2) < 0) __PYX_ERR(0, 171, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_raw_send_wait_ack, __pyx_t_2) < 0) __PYX_ERR(0, 169, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":182
+  /* "serialhdl.pyx":180
  *             raise error("Serial connection closed")
  *         return params
  *     def send(self, msg, minclock=0, reqclock=0):             # <<<<<<<<<<<<<<
  *         cmd = self.msgparser.create_command(msg)
  *         self.raw_send(cmd, minclock, reqclock, self.default_cmd_queue)
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_29send, 0, __pyx_n_s_SerialReader_send, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__42)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 182, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_29send, 0, __pyx_n_s_SerialReader_send, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__42)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 180, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_CyFunction_SetDefaultsTuple(__pyx_t_2, __pyx_tuple__43);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_send, __pyx_t_2) < 0) __PYX_ERR(0, 182, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_send, __pyx_t_2) < 0) __PYX_ERR(0, 180, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":185
+  /* "serialhdl.pyx":183
  *         cmd = self.msgparser.create_command(msg)
  *         self.raw_send(cmd, minclock, reqclock, self.default_cmd_queue)
  *     def send_with_response(self, msg, response):             # <<<<<<<<<<<<<<
  *         cmd = self.msgparser.create_command(msg)
  *         src = SerialRetryCommand(self, response)
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_31send_with_response, 0, __pyx_n_s_SerialReader_send_with_response, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__45)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 185, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_31send_with_response, 0, __pyx_n_s_SerialReader_send_with_response, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__45)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 183, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_send_with_response, __pyx_t_2) < 0) __PYX_ERR(0, 185, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_send_with_response, __pyx_t_2) < 0) __PYX_ERR(0, 183, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":189
+  /* "serialhdl.pyx":187
  *         src = SerialRetryCommand(self, response)
  *         return src.get_response(cmd, self.default_cmd_queue)
  *     def alloc_command_queue(self):             # <<<<<<<<<<<<<<
  *         return self.ffi_main.gc(self.ffi_lib.serialqueue_alloc_commandqueue(),
  *                                 self.ffi_lib.serialqueue_free_commandqueue)
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_33alloc_command_queue, 0, __pyx_n_s_SerialReader_alloc_command_queue, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__47)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 189, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_33alloc_command_queue, 0, __pyx_n_s_SerialReader_alloc_command_queue, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__47)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 187, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_alloc_command_queue, __pyx_t_2) < 0) __PYX_ERR(0, 189, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_alloc_command_queue, __pyx_t_2) < 0) __PYX_ERR(0, 187, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":193
+  /* "serialhdl.pyx":191
  *                                 self.ffi_lib.serialqueue_free_commandqueue)
  *     # Dumping debug lists
  *     def dump_debug(self):             # <<<<<<<<<<<<<<
  *         out = []
  *         out.append("Dumping serial stats: %s" % (
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_35dump_debug, 0, __pyx_n_s_SerialReader_dump_debug, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__49)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 193, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_35dump_debug, 0, __pyx_n_s_SerialReader_dump_debug, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__49)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 191, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_dump_debug, __pyx_t_2) < 0) __PYX_ERR(0, 193, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_dump_debug, __pyx_t_2) < 0) __PYX_ERR(0, 191, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":217
+  /* "serialhdl.pyx":215
  *         return '\n'.join(out)
  *     # Default message handlers
  *     def _handle_unknown_init(self, params):             # <<<<<<<<<<<<<<
  *         logging.debug("Unknown message %d (len %d) while identifying",
  *                       params['#msgid'], len(params['#msg']))
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_37_handle_unknown_init, 0, __pyx_n_s_SerialReader__handle_unknown_ini, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__51)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 217, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_37_handle_unknown_init, 0, __pyx_n_s_SerialReader__handle_unknown_ini, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__51)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 215, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_handle_unknown_init, __pyx_t_2) < 0) __PYX_ERR(0, 217, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_handle_unknown_init, __pyx_t_2) < 0) __PYX_ERR(0, 215, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":220
+  /* "serialhdl.pyx":218
  *         logging.debug("Unknown message %d (len %d) while identifying",
  *                       params['#msgid'], len(params['#msg']))
  *     def handle_unknown(self, params):             # <<<<<<<<<<<<<<
  *         logging.warn("Unknown message type %d: %s",
  *                      params['#msgid'], repr(params['#msg']))
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_39handle_unknown, 0, __pyx_n_s_SerialReader_handle_unknown, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__53)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 220, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_39handle_unknown, 0, __pyx_n_s_SerialReader_handle_unknown, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__53)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 218, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_handle_unknown, __pyx_t_2) < 0) __PYX_ERR(0, 220, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_handle_unknown, __pyx_t_2) < 0) __PYX_ERR(0, 218, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":223
+  /* "serialhdl.pyx":221
  *         logging.warn("Unknown message type %d: %s",
  *                      params['#msgid'], repr(params['#msg']))
  *     def handle_output(self, params):             # <<<<<<<<<<<<<<
  *         logging.info("%s: %s", params['#name'], params['#msg'])
  *     def handle_default(self, params):
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_41handle_output, 0, __pyx_n_s_SerialReader_handle_output, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__55)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 223, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_41handle_output, 0, __pyx_n_s_SerialReader_handle_output, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__55)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 221, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_handle_output, __pyx_t_2) < 0) __PYX_ERR(0, 223, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_handle_output, __pyx_t_2) < 0) __PYX_ERR(0, 221, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":225
+  /* "serialhdl.pyx":223
  *     def handle_output(self, params):
  *         logging.info("%s: %s", params['#name'], params['#msg'])
  *     def handle_default(self, params):             # <<<<<<<<<<<<<<
  *         logging.warn("got %s", params)
  *     def __del__(self):
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_43handle_default, 0, __pyx_n_s_SerialReader_handle_default, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__57)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 225, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_43handle_default, 0, __pyx_n_s_SerialReader_handle_default, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__57)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 223, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_handle_default, __pyx_t_2) < 0) __PYX_ERR(0, 225, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_handle_default, __pyx_t_2) < 0) __PYX_ERR(0, 223, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":227
+  /* "serialhdl.pyx":225
  *     def handle_default(self, params):
  *         logging.warn("got %s", params)
  *     def __del__(self):             # <<<<<<<<<<<<<<
  *         self.disconnect()
  * 
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_45__del__, 0, __pyx_n_s_SerialReader___del, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__59)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 227, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_12SerialReader_45__del__, 0, __pyx_n_s_SerialReader___del, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__59)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 225, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_del, __pyx_t_2) < 0) __PYX_ERR(0, 227, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_del, __pyx_t_2) < 0) __PYX_ERR(0, 225, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
   /* "serialhdl.pyx":14
@@ -13671,101 +13533,101 @@ if (!__Pyx_RefNanny) {
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":231
+  /* "serialhdl.pyx":229
  * 
  * # Class to send a query command and return the received response
  * class SerialRetryCommand:             # <<<<<<<<<<<<<<
  *     def __init__(self, serial, name, oid=None):
  *         self.serial = serial
  */
-  __pyx_t_1 = __Pyx_Py3MetaclassPrepare((PyObject *) NULL, __pyx_empty_tuple, __pyx_n_s_SerialRetryCommand, __pyx_n_s_SerialRetryCommand, (PyObject *) NULL, __pyx_n_s_serialhdl, (PyObject *) NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 231, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_Py3MetaclassPrepare((PyObject *) NULL, __pyx_empty_tuple, __pyx_n_s_SerialRetryCommand, __pyx_n_s_SerialRetryCommand, (PyObject *) NULL, __pyx_n_s_serialhdl, (PyObject *) NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 229, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
 
-  /* "serialhdl.pyx":232
+  /* "serialhdl.pyx":230
  * # Class to send a query command and return the received response
  * class SerialRetryCommand:
  *     def __init__(self, serial, name, oid=None):             # <<<<<<<<<<<<<<
  *         self.serial = serial
  *         self.name = name
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_18SerialRetryCommand_1__init__, 0, __pyx_n_s_SerialRetryCommand___init, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__61)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 232, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_18SerialRetryCommand_1__init__, 0, __pyx_n_s_SerialRetryCommand___init, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__61)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 230, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_CyFunction_SetDefaultsTuple(__pyx_t_2, __pyx_tuple__62);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_init, __pyx_t_2) < 0) __PYX_ERR(0, 232, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_init, __pyx_t_2) < 0) __PYX_ERR(0, 230, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":238
+  /* "serialhdl.pyx":236
  *         self.last_params = None
  *         self.serial.register_response(self.handle_callback, name, oid)
  *     def handle_callback(self, params):             # <<<<<<<<<<<<<<
  *         self.last_params = params
  *     def get_response(self, cmd, cmd_queue, minclock=0):
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_18SerialRetryCommand_3handle_callback, 0, __pyx_n_s_SerialRetryCommand_handle_callba, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__64)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 238, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_18SerialRetryCommand_3handle_callback, 0, __pyx_n_s_SerialRetryCommand_handle_callba, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__64)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 236, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_handle_callback, __pyx_t_2) < 0) __PYX_ERR(0, 238, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_handle_callback, __pyx_t_2) < 0) __PYX_ERR(0, 236, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":240
+  /* "serialhdl.pyx":238
  *     def handle_callback(self, params):
  *         self.last_params = params
  *     def get_response(self, cmd, cmd_queue, minclock=0):             # <<<<<<<<<<<<<<
  *         retries = 5
  *         retry_delay = .010
  */
-  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_18SerialRetryCommand_5get_response, 0, __pyx_n_s_SerialRetryCommand_get_response, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__66)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 240, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_New(&__pyx_mdef_9serialhdl_18SerialRetryCommand_5get_response, 0, __pyx_n_s_SerialRetryCommand_get_response, NULL, __pyx_n_s_serialhdl, __pyx_d, ((PyObject *)__pyx_codeobj__66)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 238, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_CyFunction_SetDefaultsTuple(__pyx_t_2, __pyx_tuple__67);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_get_response, __pyx_t_2) < 0) __PYX_ERR(0, 240, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_get_response, __pyx_t_2) < 0) __PYX_ERR(0, 238, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "serialhdl.pyx":231
+  /* "serialhdl.pyx":229
  * 
  * # Class to send a query command and return the received response
  * class SerialRetryCommand:             # <<<<<<<<<<<<<<
  *     def __init__(self, serial, name, oid=None):
  *         self.serial = serial
  */
-  __pyx_t_2 = __Pyx_Py3ClassCreate(((PyObject*)&__Pyx_DefaultClassType), __pyx_n_s_SerialRetryCommand, __pyx_empty_tuple, __pyx_t_1, NULL, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 231, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_Py3ClassCreate(((PyObject*)&__Pyx_DefaultClassType), __pyx_n_s_SerialRetryCommand, __pyx_empty_tuple, __pyx_t_1, NULL, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 229, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_SerialRetryCommand, __pyx_t_2) < 0) __PYX_ERR(0, 231, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_SerialRetryCommand, __pyx_t_2) < 0) __PYX_ERR(0, 229, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":258
+  /* "serialhdl.pyx":256
  * 
  * # Attempt to place an AVR stk500v2 style programmer into normal mode
  * def stk500v2_leave(ser, reactor):             # <<<<<<<<<<<<<<
  *     logging.debug("Starting stk500v2 leave programmer sequence")
  *     util.clear_hupcl(ser.fileno())
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_9serialhdl_1stk500v2_leave, NULL, __pyx_n_s_serialhdl); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 258, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_9serialhdl_1stk500v2_leave, NULL, __pyx_n_s_serialhdl); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 256, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_stk500v2_leave, __pyx_t_1) < 0) __PYX_ERR(0, 258, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_stk500v2_leave, __pyx_t_1) < 0) __PYX_ERR(0, 256, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":275
+  /* "serialhdl.pyx":273
  *     ser.baudrate = origbaud
  * 
  * def cheetah_reset(serialport, reactor):             # <<<<<<<<<<<<<<
  *     # Fysetc Cheetah v1.2 boards have a weird stateful circuitry for
  *     # configuring the bootloader. This sequence takes care of disabling it for
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_9serialhdl_3cheetah_reset, NULL, __pyx_n_s_serialhdl); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 275, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_9serialhdl_3cheetah_reset, NULL, __pyx_n_s_serialhdl); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 273, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_cheetah_reset, __pyx_t_1) < 0) __PYX_ERR(0, 275, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_cheetah_reset, __pyx_t_1) < 0) __PYX_ERR(0, 273, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "serialhdl.pyx":302
+  /* "serialhdl.pyx":300
  * 
  * # Attempt an arduino style reset on a serial port
  * def arduino_reset(serialport, reactor):             # <<<<<<<<<<<<<<
  *     # First try opening the port at a different baud
  *     ser = serial.Serial(serialport, 2400, timeout=0, exclusive=True)
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_9serialhdl_5arduino_reset, NULL, __pyx_n_s_serialhdl); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 302, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_9serialhdl_5arduino_reset, NULL, __pyx_n_s_serialhdl); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 300, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_arduino_reset, __pyx_t_1) < 0) __PYX_ERR(0, 302, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_arduino_reset, __pyx_t_1) < 0) __PYX_ERR(0, 300, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "serialhdl.pyx":1
