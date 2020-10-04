@@ -6,5 +6,6 @@ setup(ext_modules = cythonize("./*.pyx", compiler_directives={'language_level': 
 
 
 # usage:
+# cd klipperui
 # source klippy-environment/bin/activate
-# ./setup.py build_ext --inplace
+# python3 ./klippy/setup.py build_ext --inplace
