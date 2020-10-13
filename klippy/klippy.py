@@ -153,8 +153,7 @@ class Printer:
                     return
                 cb()
         except Exception as e:
-            logging.error(repr(e))
-            #self.invoke_shutdown("Internal error during ready callback", message_shutdown, e)
+            self.invoke_shutdown("Internal error during ready callback", message_shutdown, e)
     def run(self):
         systime = time.time()
         monotime = self.reactor.monotonic()
