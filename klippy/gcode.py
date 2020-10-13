@@ -86,7 +86,7 @@ class GCodeDispatch:
         self.gcode_help = {}
         # Register commands needed before config file is loaded
         handlers = ['M110', 'M112', 'M115',
-                    'RESTART', 'FIRMWARE_RESTART', 'ECHO', 'STATUS', 'HELP']
+                    'FIRMWARE_RESTART', 'ECHO', 'STATUS', 'HELP']
         for cmd in handlers:
             func = getattr(self, 'cmd_' + cmd)
             desc = getattr(self, 'cmd_' + cmd + '_help', None)
@@ -304,9 +304,6 @@ class GCodeDispatch:
             toolhead.dwell(0.500)
             toolhead.wait_moves()
         self.printer.request_exit(result)
-    cmd_RESTART_help = "Reload config file and restart host software"
-    def cmd_RESTART(self, gcmd):
-        self.request_restart('restart')
     cmd_FIRMWARE_RESTART_help = "Restart firmware, host, and reload config"
     def cmd_FIRMWARE_RESTART(self, gcmd):
         self.request_restart('firmware_restart')
