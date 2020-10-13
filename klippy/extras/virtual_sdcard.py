@@ -213,7 +213,7 @@ class PrintjobManager:
     def handle_ready(self):
         self.toolhead = self.printer.lookup_object('toolhead')
 
-    def handle_shutdown(self):
+    def handle_shutdown(self, *args):
         if len(self.jobs) and self.jobs[0].state == 'printing':
             self.stop_printjob()
             try:

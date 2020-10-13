@@ -508,7 +508,7 @@ class ToolHead:
                      'max_accel_to_decel': self.requested_accel_to_decel,
                      'square_corner_velocity': self.square_corner_velocity})
         return res
-    def _handle_shutdown(self):
+    def _handle_shutdown(self, title, message):
         self.can_pause = False
         self.move_queue.reset()
     def get_kinematics(self):

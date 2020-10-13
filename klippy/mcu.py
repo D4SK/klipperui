@@ -457,10 +457,10 @@ class MCU:
         prefix = "MCU '%s' shutdown: " % (self._name,)
         if params['#name'] == 'is_shutdown':
             prefix = "Previous MCU '%s' shutdown: " % (self._name,)
-        self._printer.invoke_async_shutdown(prefix + msg + error_help(msg))
+        self._printer.invoke_async_shutdown(title=prefix, message= msg + error_help(msg))
     def _handle_starting(self, params):
         if not self._is_shutdown:
-            self._printer.invoke_async_shutdown("MCU '%s' spontaneous restart"
+            self._printer.invoke_async_shutdown(title="MCU '%s' spontaneous restart"
                                                 % (self._name,))
     # Connection phase
     def _check_restart(self, reason):
@@ -683,7 +683,7 @@ class MCU:
         if self._steppersync is not None:
             self._ffi_lib.steppersync_free(self._steppersync)
             self._steppersync = None
-    def _shutdown(self, force=False):
+    def _shutdown(self, *args, force=False):
         if (self._emergency_stop_cmd is None
             or (self._is_shutdown and not force)):
             return
@@ -756,7 +756,7 @@ class MCU:
         self._is_timeout = True
         logging.info("Timeout with MCU '%s' (eventtime=%f)",
                      self._name, eventtime)
-        self._printer.invoke_shutdown("Lost communication with MCU '%s'" % (
+        self._printer.invoke_shutdown(title="Lost communication with MCU '%s'" % (
             self._name,))
     def stats(self, eventtime):
         msg = "%s: mcu_awake=%.03f mcu_task_avg=%.06f mcu_task_stddev=%.06f" % (

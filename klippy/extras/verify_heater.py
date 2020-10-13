@@ -40,7 +40,7 @@ class HeaterCheck:
         logging.info("Starting heater checks for %s", self.heater_name)
         reactor = self.printer.get_reactor()
         self.check_timer = reactor.register_timer(self.check_event, reactor.NOW)
-    def handle_shutdown(self):
+    def handle_shutdown(self, *args):
         if self.check_timer is not None:
             reactor = self.printer.get_reactor()
             reactor.update_timer(self.check_timer, reactor.NEVER)
@@ -86,7 +86,7 @@ class HeaterCheck:
     def heater_fault(self):
         msg = "Heater %s not heating at expected rate" % (self.heater_name,)
         logging.error(msg)
-        self.printer.invoke_shutdown(msg + HINT_THERMAL)
+        self.printer.invoke_shutdown(title=msg, message=HINT_THERMAL)
         return self.printer.get_reactor().NEVER
 
 def load_config_prefix(config):

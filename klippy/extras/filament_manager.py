@@ -61,7 +61,7 @@ class FilamentManager:
             extruder = self.printer.lookup_object(extruder_id, None)
             if extruder: self.extruders[extruder_id] = extruder
 
-    def handle_shutdown(self):
+    def handle_shutdown(self, title, message):
         self.update_loaded_material_amount()
         self.write_loaded_material_json()
 

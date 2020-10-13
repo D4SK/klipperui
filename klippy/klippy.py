@@ -153,7 +153,8 @@ class Printer:
                     return
                 cb()
         except Exception as e:
-            self.invoke_error_shutdown(e, "Internal error during ready callback", message_shutdown)
+            logging.error(repr(e))
+            #self.invoke_shutdown("Internal error during ready callback", message_shutdown, e)
     def run(self):
         systime = time.time()
         monotime = self.reactor.monotonic()
@@ -165,9 +166,10 @@ class Printer:
         except Exception as e:
             # Exception from a reactor callback - try to shutdown
             try:
-                self.reactor.register_callback(lambda t: self.invoke_error_shutdown(e))
+                self.reactor.register_callback(lambda t: self.invoke_shutdown(e=e))
+                logging.error("Unhandled exception during run")
                 self.reactor.run()
-            except:
+            except Exception as e:
                 logging.exception("Repeat unhandled exception during run")
                 # Another exception - try to exit
                 self.run_result = "error_exit"
@@ -186,30 +188,34 @@ class Printer:
             logging.info(info)
         if self.bglogger is not None:
             self.bglogger.set_rollover_info(name, info)
-    def invoke_error_shutdown(self, e, title=None, message=None):
-        if not (title and message):
-            if e in error_descriptions:
-                title, message = error_descriptions[e]
-                title += f": {repr(e)}"
+    def invoke_shutdown(self, title=None, message=None, e=None):
+        if e:
+            # if type(e) in error_descriptions.keys():
+            #     exception_title, excption_message = error_descriptions[type(e)]
+            #     exception_title += f": {str(e)}"
+            # else:
+            exception_message = ''.join(traceback.format_tb(e.__traceback__)) 
+            exception_title = str(e)
+            title = title or exception_title
+            message = message or exception_message
+            if self.state == "startup":
                 util.dump_mcu_build()
-                logging.exception(title)
-            else:
-                message = ''.join(traceback.format_tb(e.__traceback__)) 
-                title = repr(e)
-        logging.exception(e)
-        self.send_event("klippy:critical_error", title, message)
-    def invoke_shutdown(self, ): # shut down all work, but dont exit
+            logging.exception(title)
+        else:
+            logging.error(f"{title}\n {message}")
+        title = title or "Shutdown"
+        message = message or message_shutdown
         if self.state == "shutdown":
             return
         self._set_state("shutdown")
         for cb in self.event_handlers.get("klippy:shutdown", []):
             try:
-                cb()
+                cb(title, message)
             except:
                 logging.exception("Exception during shutdown handler")
-    def invoke_async_shutdown(self, msg):
+    def invoke_async_shutdown(self, *args, **kwargs):
         self.reactor.register_async_callback(
-            (lambda e: self.invoke_shutdown(msg)))
+            (lambda e: self.invoke_shutdown(*args, **kwargs)))
     def register_event_handler(self, event, callback):
         self.event_handlers.setdefault(event, []).append(callback)
     def send_event(self, event, *params):
@@ -259,7 +265,7 @@ def main():
     options, args = opts.parse_args()
     if len(args) != 1:
         opts.error("Incorrect number of arguments")
-    start_args = {'config_file': args[0], 'apiserver': options.apiserver, 'start_reason': "startup"}
+    start_args = {'config_file': args[0], 'apiserver': options.apiserver}
 
     debuglevel = logging.INFO
     if options.verbose:
@@ -294,30 +300,17 @@ def main():
                         " Severe timing issues may result!")
 
     # Start Printer() class
-    while 1:
-        if bglogger is not None:
-            bglogger.clear_rollover_info()
-            bglogger.set_rollover_info('versions', versions)
-        gc.collect()
-        main_reactor = reactor.Reactor()
-        printer = Printer(bglogger, start_args)
-        res = printer.run()
-        if res in ['exit', 'error_exit', 'shutdown', 'reboot']:
-            break
-        time.sleep(1.)
-        main_reactor = printer = None
-        logging.info("Restarting printer")
-        start_args['start_reason'] = res
+    if bglogger is not None:
+        bglogger.clear_rollover_info()
+        bglogger.set_rollover_info('versions', versions)
+
+    res = Printer(bglogger, start_args).run()
 
     if bglogger is not None:
         bglogger.stop()
-
-    if res == 'error_exit':
-        sys.exit(-1)
-    elif res == 'shutdown':
-        Popen(['sudo','systemctl', 'poweroff'])
-    elif res == 'reboot':
-        Popen(['sudo','systemctl', 'reboot']) 
+    
+    if res == "firmware_restart":
+        Popen('sudo', 'systemctl', 'restart', 'klipper')
 
 if __name__ == '__main__':
     main()

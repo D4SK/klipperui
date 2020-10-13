@@ -137,7 +137,7 @@ class GCodeDispatch:
         return dict(self.gcode_help)
     def register_output_handler(self, cb):
         self.output_callbacks.append(cb)
-    def _handle_shutdown(self):
+    def _handle_shutdown(self, *args):
         if not self.is_printer_ready:
             return
         self.is_printer_ready = False
@@ -188,7 +188,7 @@ class GCodeDispatch:
             except:
                 msg = 'Internal error on command:"%s"' % (cmd,)
                 logging.exception(msg)
-                self.printer.invoke_shutdown(msg)
+                self.printer.invoke_shutdown(title="Gcode Error", message=msg)
                 self._respond_error(msg)
                 if not need_ack:
                     raise
@@ -288,7 +288,7 @@ class GCodeDispatch:
         pass
     def cmd_M112(self, gcmd):
         # Emergency Stop
-        self.printer.invoke_shutdown("Shutdown due to M112 command")
+        self.printer.invoke_shutdown(title="Shutdown due to M112 command")
     def cmd_M115(self, gcmd):
         # Get Firmware Version and Capabilities
         software_version = self.printer.get_start_args().get('software_version')
@@ -361,7 +361,7 @@ class GCodeIO:
         for eventtime, data in self.input_log:
             out.append("Read %f: %s" % (eventtime, repr(data)))
         logging.info("\n".join(out))
-    def _handle_shutdown(self):
+    def _handle_shutdown(self, *args):
         if not self.is_printer_ready:
             return
         self.is_printer_ready = False
