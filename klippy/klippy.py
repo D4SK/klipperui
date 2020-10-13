@@ -204,7 +204,7 @@ class Printer:
         self._set_state("shutdown")
         for cb in self.event_handlers.get("klippy:shutdown", []):
             try:
-                cb(title, message)
+                cb()
             except:
                 logging.exception("Exception during shutdown handler")
     def invoke_async_shutdown(self, msg):
@@ -259,7 +259,7 @@ def main():
     options, args = opts.parse_args()
     if len(args) != 1:
         opts.error("Incorrect number of arguments")
-    start_args = {'config_file': args[0], 'apiserver': options.apiserver}
+    start_args = {'config_file': args[0], 'apiserver': options.apiserver, 'start_reason': "startup"}
 
     debuglevel = logging.INFO
     if options.verbose:
