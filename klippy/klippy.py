@@ -321,18 +321,30 @@ def main():
     gc.disable()
 
     # Start Printer() class
-    if bglogger is not None:
-        bglogger.clear_rollover_info()
-        bglogger.set_rollover_info('versions', versions)
-    gc.collect()
-    main_reactor = reactor.Reactor(gc_checking=True)
-    res = Printer(main_reactor, bglogger, start_args).run()
-
+    while 1:
+        if bglogger is not None:
+            bglogger.clear_rollover_info()
+            bglogger.set_rollover_info('versions', versions)
+        gc.collect()
+        main_reactor = reactor.Reactor(gc_checking=True)
+        printer = Printer(main_reactor, bglogger, start_args)
+        res = printer.run()
+        if res in ['exit', 'error_exit']:
+            break
+        time.sleep(1.)
+        main_reactor.finalize()
+        main_reactor = printer = None
+        logging.info("Restarting printer")
+        start_args['start_reason'] = res
+        # try:
+        #del(sys.modules['kgui'])
+        # except:
+        #     pass
     if bglogger is not None:
         bglogger.stop()
-    if res == "firmware_restart":
-        Popen('sudo', 'systemctl', 'restart', 'klipper')
 
+    if res == 'error_exit':
+        sys.exit(-1)
 
 if __name__ == '__main__':
     main()
