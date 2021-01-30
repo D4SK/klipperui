@@ -13,6 +13,7 @@
 #include "internal.h" // GPIO
 #include "sched.h" // sched_shutdown
 
+
 DECL_CONSTANT("ADC_MAX", 65.535);
 
 
@@ -44,6 +45,7 @@ static const uint8_t adc_pins[] = {
 struct gpio_adc
 gpio_adc_setup(uint32_t pin)
 {
+    //output("gpio_adc_setup");
     // Find pin in adc_pins table
     int chan;
     for (chan=0; ; chan++) {
@@ -68,7 +70,7 @@ gpio_adc_setup(uint32_t pin)
         //     ;
         MODIFY_REG(adc->CR, ADC_CR_ADCALDIF, 0); // Set calibration mode to Single ended (not differential)
         MODIFY_REG(adc->CR, ADC_CR_ADCALLIN, ADC_CR_ADCALLIN); // Enable linearity calibration
-        MODIFY_REG(adc->CR, ADC_CR_ADCAL, ADC_CR_ADCAL); // Start the calibration
+        MODIFY_REG(adc->CR, ADC_CR_ADCAL,    ADC_CR_ADCAL); // Start the calibration
         while(adc->CR & ADC_CR_ADCAL) // wait for the calibration
             ;
         uint32_t aticks = 0b010; // Set 8.5 ADC clock cycles sample time for every channel (Reference manual pg.940)
@@ -96,34 +98,61 @@ gpio_adc_setup(uint32_t pin)
 uint32_t
 gpio_adc_sample(struct gpio_adc g)
 {
+    //output("gpio_adc_sample");
+    return 0;
+}
+/*
+uint32_t
+gpio_adc_sample(struct gpio_adc g)
+{
     ADC_TypeDef *adc = g.adc;
     if (adc->ISR & ADC_ISR_EOC) // Conversion ready, EOC set
+    {
+        shutdown("Logging ISRadc_sampleEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE");
         return 0;
+    }
     if ((adc->CR & ADC_CR_ADSTART) || adc->SQR1 != g.chan) // the channel condition only works if this ist the only channel on the sequence and length set to 1 (ADC_SQR1_L = 0000)
+    {
         // Conversion already started (still in progress) or busy on another channel or not started yet (EOC flag is cleared by hardware when reading DR)
+        shutdown("Logging 2adc_sampleEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE");
         return timer_from_us(20);
+    }
     // Start sample
     adc->SQR1 = g.chan;
     adc->CR = ADC_CR_ADSTART | ADC_CR_ADEN; //start the conversion
+    shutdown("Logging 3adc_sampleEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE");
     return timer_from_us(20);
     
-}
+}*/
 
+uint16_t
+gpio_adc_read(struct gpio_adc g)
+{
+    //output("gpip_adc_read");
+    uint16_t resylt = 10;
+    return resylt;
+}
+/*
 // Read a value; use only after gpio_adc_sample() returns zero
 uint16_t
 gpio_adc_read(struct gpio_adc g)
 {
     ADC_TypeDef *adc = g.adc;
+        shutdown("Logging adc_riiiiiidddddddddddddddddddddddddddddddddddddddd");
+
     return adc->DR;
-}
+}*/
 
 // Cancel a sample that may have been started with gpio_adc_sample()
 void
 gpio_adc_cancel_sample(struct gpio_adc g)
-{
+{    
+    //output("gpio_adc_cancel_sample");
+    return;
+    /*
     ADC_TypeDef *adc = g.adc;
     irqstatus_t flag = irq_save();
     if (adc->CR & ADC_CR_ADSTART && adc->SQR1 == g.chan)// what is this used for the ADSTART is not as long true as SR_STRT on stm32f4
         gpio_adc_read(g);
-    irq_restore(flag);
+    irq_restore(flag);*/
 }

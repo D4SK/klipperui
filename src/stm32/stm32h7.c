@@ -1,20 +1,20 @@
-// Code to setup clocks and gpio on stm32h7
+// Code to setup clocks and gpio on stm32h7 
 //
 // Copyright (C) 2020 Konstantin Vogel <konstantin.vogel@gmx.net>
 //
 // This file may be distributed under the terms of the GNU GPLv3 license.
 
 
+// USB AND I2C NOT SUPPORTED!!
+
 #include "autoconf.h" // CONFIG_CLOCK_REF_FREQ
 #include "board/armcm_boot.h" // VectorTable
 #include "board/irq.h" // irq_disable
-#include "board/usb_cdc.h" // usb_request_bootloader
 #include "command.h" // DECL_CONSTANT_STR
 #include "internal.h" // enable_pclock
 #include "sched.h" // sched_main
 
 #define FREQ_PERIPH (CONFIG_CLOCK_FREQ / 4)
-#define FREQ_USB 48000000
 
 // Enable a peripheral clock
 void
@@ -97,7 +97,6 @@ get_pclock_frequency(uint32_t periph_base)
 }
 
 // Enable a GPIO peripheral clock
-// TODO test this
 void
 gpio_clock_enable(GPIO_TypeDef *regs)
 {
@@ -127,58 +126,79 @@ gpio_peripheral(uint32_t gpio, uint32_t mode, int pullup)
     regs->OSPEEDR = (regs->OSPEEDR & ~m_msk) | (0x02 << m_shift);
 }
 
-#define USB_BOOT_FLAG_ADDR (CONFIG_RAM_START + CONFIG_RAM_SIZE - 4096)
-#define USB_BOOT_FLAG 0x55534220424f4f54 // "USB BOOT"
-
-// Handle USB reboot requests
-void
-usb_request_bootloader(void)
-{
-    irq_disable();
-    *(uint64_t*)USB_BOOT_FLAG_ADDR = USB_BOOT_FLAG;
-    NVIC_SystemReset();
-}
-
 #if !CONFIG_STM32_CLOCK_REF_INTERNAL
 DECL_CONSTANT_STR("RESERVE_PINS_crystal", "PH0,PH1");
 #endif
 
-// Main clock setup called at chip startup
+// Main clock and power setup called at chip startup
 static void
 clock_setup(void)
 {
-    uint32_t pll_base = 2000000;//TODO
-    uint32_t pll_freq = CONFIG_CLOCK_FREQ * 2;
+    // see https://github.com/apache/incubator-nuttx/blob/cdd111a1faec9b40b707797e00c4afae4956fb3f/arch/arm/src/stm32h7/stm32h7x3xx_rcc.c
+    // and https://github.com/stm32-rs/stm32h7xx-hal/blob/master/src/pwr.rs
+    // Set this despite defaults being correct. "The software has to program the supply configuration in PWR control register 3" (pg. 259)
+    // Only a single write is allowed (pg. 304)
+    //if (PWR->CR3 & PWR_CR3_SCUEN)
+    PWR->CR3 = (PWR->CR3 | PWR_CR3_LDOEN) & ~(PWR_CR3_BYPASS | PWR_CR3_SCUEN);
+    while (!(PWR->CSR1 & PWR_CSR1_ACTVOSRDY))
+        ;
+    // HSE(25mhz) /=DIVM1(5) -pll_base(5Mhz)-> *=DIVN1(192) -pll_freq-> /=DIVP1(2) -SYSCLK(480mhz)->
+    uint32_t pll_base = 5000000; 
+    uint32_t pll_freq = CONFIG_CLOCK_FREQ * 2; // only even dividers (DIVP1) are allowed
     if (!CONFIG_STM32_CLOCK_REF_INTERNAL) {
         // Configure PLL from external crystal (HSE)
         RCC->CR |= RCC_CR_HSEON; // enable HSE input
-        MODIFY_REG(RCC->PLLCKSELR, RCC_PLLCKSELR_PLLSRC_NONE, RCC_PLLCKSELR_PLLSRC_HSE); // choose HSE as clock source
-        MODIFY_REG(RCC->PLLCKSELR, RCC_PLLCKSELR_DIVM1, (CONFIG_CLOCK_REF_FREQ / pll_base) << RCC_PLLCKSELR_DIVM1_Pos);// set pre divider DIVM1
+        while(!(RCC->CR & RCC_CR_HSERDY))
+            ;
+        MODIFY_REG(RCC->PLLCKSELR, RCC_PLLCKSELR_PLLSRC_Msk, RCC_PLLCKSELR_PLLSRC_HSE);
+        MODIFY_REG(RCC->PLLCKSELR, RCC_PLLCKSELR_DIVM1_Msk, (CONFIG_CLOCK_REF_FREQ/pll_base) << RCC_PLLCKSELR_DIVM1_Pos);
     } else {
         // Configure PLL from internal 64Mhz oscillator (HSI)
-        MODIFY_REG(RCC->PLLCKSELR, RCC_PLLCKSELR_PLLSRC_NONE, RCC_PLLCKSELR_PLLSRC_HSI); // choose HSI as clock source
-        MODIFY_REG(RCC->PLLCKSELR, RCC_PLLCKSELR_DIVM1, (64000000 / pll_base) << RCC_PLLCKSELR_DIVM1_Pos);// set pre divider DIVM1
+        pll_base = 4000000; // HSI frequency of 64mhz is integer divisible with 4mhz
+        MODIFY_REG(RCC->PLLCKSELR, RCC_PLLCKSELR_PLLSRC_Msk, RCC_PLLCKSELR_PLLSRC_HSI);
+        MODIFY_REG(RCC->PLLCKSELR, RCC_PLLCKSELR_DIVM1_Msk, (64000000 / pll_base) << RCC_PLLCKSELR_DIVM1_Pos);
     }
-    RCC->PLL1DIVR = (((pll_freq/pll_base) << RCC_PLL1DIVR_N1_Pos)
-                    | (0 << RCC_PLL1DIVR_P1_Pos)
-                    | ((pll_freq/FREQ_USB) << RCC_PLL1DIVR_Q1_Pos));
-    RCC->CR |= RCC_CR_PLLON; //when configuration is done turn on the PLL
+    MODIFY_REG(RCC->PLLCFGR, RCC_PLLCFGR_PLL1FRACEN, 0); // Default should already be 0
+    MODIFY_REG(RCC->PLLCFGR, RCC_PLLCFGR_PLL1VCOSEL_Msk, 0); // Default should already be 0
+    // Set input frequency range of PLL1 according to pll_base (3=8-16Mhz, 2=4-8Mhz)
+    MODIFY_REG(RCC->PLLCFGR, RCC_PLLCFGR_PLL1RGE_Msk, RCC_PLLCFGR_PLL1RGE_2);
+    MODIFY_REG(RCC->PLLCFGR, RCC_PLLCFGR_DIVR1EN_Msk, 0); // Disable unused outputs
+    MODIFY_REG(RCC->PLLCFGR, RCC_PLLCFGR_DIVQ1EN_Msk, 0);
+    MODIFY_REG(RCC->PLLCFGR, RCC_PLLCFGR_DIVP1EN_Msk, RCC_PLLCFGR_DIVP1EN); // This is necessary, default is not 1!!!
+    // Set multiplier DIVN1 and post divider DIVP1 (where 001 = /2, 010 = not allowed, 0011 = /4...)
+    MODIFY_REG(RCC->PLL1DIVR, RCC_PLL1DIVR_N1_Msk, ((pll_freq/pll_base)-1)          << RCC_PLL1DIVR_N1_Pos);
+    MODIFY_REG(RCC->PLL1DIVR, RCC_PLL1DIVR_P1_Msk, ((pll_freq/CONFIG_CLOCK_FREQ)-1) << RCC_PLL1DIVR_P1_Pos);
 
-
-    // Set flash latency
-    MODIFY_REG(FLASH->ACR, FLASH_ACR_LATENCY, (uint32_t)(FLASH_ACR_LATENCY_7WS)); // 5 should also work
-    // Wait for PLL lock
-    while (!(RCC->CR & RCC_CR_PLLRDY))
+    // Crank up Vcore
+    MODIFY_REG(PWR->D3CR, PWR_D3CR_VOS_Msk, PWR_D3CR_VOS);
+    while (!(PWR->D3CR & PWR_D3CR_VOSRDY))
+        ;
+    // Enable VOS0 (overdrive), only relevant for revision V or later @480mhz 
+    RCC->APB4ENR |= RCC_APB4ENR_SYSCFGEN;
+    SYSCFG->PWRCR |= SYSCFG_PWRCR_ODEN;
+    while (!(PWR->D3CR & PWR_D3CR_VOSRDY))
         ;
 
-    // Switch system clock source (SYSCLK) to PLL1
-    MODIFY_REG(RCC->CFGR, RCC_CFGR_SW, RCC_CFGR_SW_PLL1);
-    // Set D1PPRE, D2PPRE, D2PPRE2, D3PPRE 
-    MODIFY_REG(RCC->D1CFGR, RCC_D1CFGR_D1PPRE, RCC_D1CFGR_D1PPRE_DIV2);
-    MODIFY_REG(RCC->D2CFGR, RCC_D2CFGR_D2PPRE1, RCC_D2CFGR_D2PPRE1_DIV2);
-    MODIFY_REG(RCC->D2CFGR, RCC_D2CFGR_D2PPRE2, RCC_D2CFGR_D2PPRE2_DIV2);
-    MODIFY_REG(RCC->D3CFGR, RCC_D3CFGR_D3PPRE, RCC_D3CFGR_D3PPRE_DIV2);
+    // Set flash latency according to clock frequency (pg.159)
+    MODIFY_REG(FLASH->ACR, FLASH_ACR_LATENCY_Msk, FLASH_ACR_LATENCY_2WS);
+    MODIFY_REG(FLASH->ACR, FLASH_ACR_WRHIGHFREQ_Msk, FLASH_ACR_WRHIGHFREQ_1);
+    while (!(FLASH->ACR & FLASH_ACR_LATENCY_2WS))
+        ;
 
+    // Switch on PLL1
+    RCC->CR |= RCC_CR_PLL1ON;
+    while (!(RCC->CR & RCC_CR_PLL1RDY))// Wait for PLL lock
+        ;
+
+    MODIFY_REG(RCC->D1CFGR, RCC_D1CFGR_HPRE_Msk,    RCC_D1CFGR_HPRE_DIV2);
+    // Set D1PPRE, D2PPRE, D2PPRE2, D3PPRE 
+    MODIFY_REG(RCC->D1CFGR, RCC_D1CFGR_D1PPRE_Msk,  RCC_D1CFGR_D1PPRE_DIV2);
+    MODIFY_REG(RCC->D2CFGR, RCC_D2CFGR_D2PPRE1_Msk, RCC_D2CFGR_D2PPRE1_DIV2);
+    MODIFY_REG(RCC->D2CFGR, RCC_D2CFGR_D2PPRE2_Msk, RCC_D2CFGR_D2PPRE2_DIV2);
+    MODIFY_REG(RCC->D3CFGR, RCC_D3CFGR_D3PPRE_Msk,  RCC_D3CFGR_D3PPRE_DIV2);
+
+    // Switch system clock source (SYSCLK) to PLL1
+    MODIFY_REG(RCC->CFGR, RCC_CFGR_SW_Msk, RCC_CFGR_SW_PLL1);
     // Wait for PLL1 to be selected
     while ((RCC->CFGR & RCC_CFGR_SWS_Msk) != RCC_CFGR_SWS_PLL1)
         ;
@@ -188,15 +208,9 @@ clock_setup(void)
 void
 armcm_main(void)
 {
-    if (CONFIG_USBSERIAL && *(uint64_t*)USB_BOOT_FLAG_ADDR == USB_BOOT_FLAG) {
-        *(uint64_t*)USB_BOOT_FLAG_ADDR = 0;
-        uint32_t *sysbase = (uint32_t*)0x1fff0000;
-        asm volatile("mov sp, %0\n bx %1"
-                     : : "r"(sysbase[0]), "r"(sysbase[1]));
-    }
-
     // Run SystemInit() and then restore VTOR
     SystemInit();
+
     SCB->VTOR = (uint32_t)VectorTable;
 
     clock_setup();

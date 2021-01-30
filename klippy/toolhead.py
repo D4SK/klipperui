@@ -1,10 +1,10 @@
 # Code for coordinating events on the printer toolhead
 #
-# Copyright (C) 2016-2020  Kevin O'Connor <kevin@koconnor.net>
+# Copyright (C) 2016-2021  Kevin O'Connor <kevin@koconnor.net>
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 import math, logging, importlib
-import mcu, homing, chelper, kinematics.extruder
+import mcu, chelper, kinematics.extruder
 
 # Common suffixes: _d is distance (in mm), _v is velocity (in
 #   mm/second), _v2 is velocity squared (mm^2/s^2), _t is time (in
@@ -228,9 +228,9 @@ class ToolHead:
         self.buffer_time_high = config.getfloat(
             'buffer_time_high', 2.000, above=self.buffer_time_low)
         self.buffer_time_start = config.getfloat(
-            'buffer_time_start', 0.250, above=0.)
+            'buffer_time_start', 0.300, above=0.)
         self.move_flush_time = config.getfloat(
-            'move_flush_time', 0.050, above=0.)
+            'move_flush_time', 0.100, above=0.)
         self.print_time = 0.
         self.special_queuing_state = "Flushed"
         self.need_check_stall = -1.
@@ -250,6 +250,8 @@ class ToolHead:
         self.trapq_free_moves = ffi_lib.trapq_free_moves
         self.step_generators = []
         # Create kinematics class
+        gcode = self.printer.lookup_object('gcode')
+        self.Coord = gcode.Coord
         self.extruder = kinematics.extruder.DummyExtruder(self.printer)
         kin_name = config.get('kinematics')
         try:
@@ -264,7 +266,6 @@ class ToolHead:
             logging.exception(msg)
             raise config.error(msg)
         # Register commands
-        gcode = self.printer.lookup_object('gcode')
         gcode.register_command('G4', self.cmd_G4)
         gcode.register_command('M400', self.cmd_M400)
         gcode.register_command('SET_VELOCITY_LIMIT',
@@ -272,8 +273,8 @@ class ToolHead:
                                desc=self.cmd_SET_VELOCITY_LIMIT_help)
         gcode.register_command('M204', self.cmd_M204)
         # Load some default modules
-        modules = ["gcode_move", "idle_timeout", "statistics", "manual_probe",
-                   "tuning_tower"]
+        modules = ["gcode_move", "homing", "idle_timeout", "statistics",
+                   "manual_probe", "tuning_tower"]
         for module_name in modules:
             self.printer.load_object(config, module_name)
     # Print time tracking
@@ -458,7 +459,7 @@ class ToolHead:
                 continue
             npt = min(self.print_time + DRIP_SEGMENT_TIME, next_print_time)
             self._update_move_time(npt)
-    def drip_move(self, newpos, speed, drip_completion):
+    def drip_move(self, newpos, speed, drip_completion, force=False):
         # Transition from "Flushed"/"Priming"/main state to "Drip" state
         self.move_queue.flush()
         self.special_queuing_state = "Drip"
@@ -469,7 +470,7 @@ class ToolHead:
         self.drip_completion = drip_completion
         # Submit move
         try:
-            self.move(newpos, speed)
+            self.move(newpos, speed, force)
         except self.printer.command_error as e:
             self.flush_step_generation()
             raise
@@ -502,7 +503,7 @@ class ToolHead:
         res.update({ 'print_time': print_time,
                      'estimated_print_time': estimated_print_time,
                      'extruder': self.extruder.get_name(),
-                     'position': homing.Coord(*self.commanded_pos),
+                     'position': self.Coord(*self.commanded_pos),
                      'max_velocity': self.max_velocity,
                      'max_accel': self.max_accel,
                      'max_accel_to_decel': self.requested_accel_to_decel,
@@ -572,8 +573,9 @@ class ToolHead:
                "max_accel: %.6f\n"
                "max_accel_to_decel: %.6f\n"
                "square_corner_velocity: %.6f"% (
-                   max_velocity, max_accel, self.requested_accel_to_decel,
-                   square_corner_velocity))
+                   self.max_velocity, self.max_accel,
+                   self.requested_accel_to_decel,
+                   self.square_corner_velocity))
         self.printer.set_rollover_info("toolhead", "toolhead: %s" % (msg,))
         gcmd.respond_info(msg, log=False)
     def cmd_M204(self, gcmd):

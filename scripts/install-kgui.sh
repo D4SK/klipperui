@@ -23,7 +23,7 @@ install_packages()
     PKGLIST="${PKGLIST} gcc-arm-none-eabi binutils-arm-none-eabi"
     # PKGLIST="${PKGLIST} stm32flash" has to be installed from source to inclde latest MCUs
 
-    # Kivy https://github.com/kivy/kivy/doc/sources/installation/installation-rpi.rst
+    # Kivy https://github.com/kivy/kivy/blob/master/doc/sources/installation/installation-rpi.rst
     PKGLIST="${PKGLIST} \
     pkg-config \
     libgl1-mesa-dev \
@@ -104,6 +104,7 @@ install_packages()
     rm -rf stm32flash-code
     git clone https://git.code.sf.net/p/stm32flash/code stm32flash-code
     cd stm32flash-code
+    git checkout ee5b009
     make
     sudo make install
 
@@ -142,21 +143,35 @@ install_klipper_service()
     report_status "Installing systemd service klipper.service..."
     sudo /bin/sh -c "cat > /etc/systemd/system/klipper.service" <<EOF
 [Unit]
-Description="Klipper with GUI running in Xorg"
-Requires=multi-user.target
+Description="Klipper with GUI"
+Requires=start_xorg.service
+
 [Service]
 Type=simple
 User=$USER
-Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-ExecStart=/bin/bash -c "/usr/bin/startx ${PYTHONDIR}/bin/python3 ${SRCDIR}/klippy/klippy.py ${HOME}/printer.cfg -v -l /tmp/klippy.log"
+Environment=DISPLAY=:0
+ExecStart=$PYTHONDIR/bin/python3 $SRCDIR/klippy/klippy.py $HOME/printer.cfg -v -l /tmp/klippy.log
 Nice=-19
 Restart=always
 RestartSec=10
+
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
+EOF
+    sudo /bin/sh -c "cat > /etc/systemd/system/start_xorg.service" <<EOF
+[Unit]
+Description="Starts Xorg"
+Requires=multi-user.target
+
+[Service]
+Type=simple
+User=$USER
+ExecStart=startx
+
+[Install]
+WantedBy=multi-user.target
 EOF
     # -v option in ExecStart is for debugging information
-    sudo chmod +x /etc/systemd/system/klipper.service
     sudo systemctl daemon-reload
     sudo systemctl enable klipper.service
 }

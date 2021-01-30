@@ -1,10 +1,10 @@
 # Z-Probe support
 #
-# Copyright (C) 2017-2020  Kevin O'Connor <kevin@koconnor.net>
+# Copyright (C) 2017-2021  Kevin O'Connor <kevin@koconnor.net>
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 import logging
-import pins, homing
+import pins
 from . import manual_probe
 
 HINT_TIMEOUT = """
@@ -25,13 +25,16 @@ class PrinterProbe:
         self.z_offset = config.getfloat('z_offset')
         self.probe_calibrate_z = 0.
         self.multi_probe_pending = False
+        self.last_state = False
         # Infer Z position to move to during a probe
         if config.has_section('stepper_z'):
             zconfig = config.getsection('stepper_z')
-            self.z_position = zconfig.getfloat('position_min', 0.)
+            self.z_position = zconfig.getfloat('position_min', 0.,
+                                               note_valid=False)
         else:
             pconfig = config.getsection('printer')
-            self.z_position = pconfig.getfloat('minimum_z_position', 0.)
+            self.z_position = pconfig.getfloat('minimum_z_position', 0.,
+                                               note_valid=False)
         # Multi-sample support (for improved accuracy)
         self.sample_count = config.getint('samples', 1, minval=1)
         self.sample_retract_dist = config.getfloat('sample_retract_dist', 2.,
@@ -72,11 +75,11 @@ class PrinterProbe:
     def _handle_homing_move_end(self, endstops):
         if self.mcu_probe in endstops:
             self.mcu_probe.probe_finish()
-    def _handle_home_rails_begin(self, rails):
+    def _handle_home_rails_begin(self, homing_state, rails):
         endstops = [es for rail in rails for es, name in rail.get_endstops()]
         if self.mcu_probe in endstops:
             self.multi_probe_begin()
-    def _handle_home_rails_end(self, rails):
+    def _handle_home_rails_end(self, homing_state, rails):
         endstops = [es for rail in rails for es, name in rail.get_endstops()]
         if self.mcu_probe in endstops:
             self.multi_probe_end()
@@ -109,7 +112,7 @@ class PrinterProbe:
         curtime = self.printer.get_reactor().monotonic()
         if 'z' not in toolhead.get_status(curtime)['homed_axes']:
             raise self.printer.command_error("Must home before probe")
-        homing_state = homing.Homing(self.printer)
+        homing_state = self.printer.lookup_object('homing').new_homing_state()
         pos = toolhead.get_position()
         pos[2] = self.z_position
         endstops = [(self.mcu_probe, "probe")]
@@ -187,7 +190,10 @@ class PrinterProbe:
         toolhead = self.printer.lookup_object('toolhead')
         print_time = toolhead.get_last_move_time()
         res = self.mcu_probe.query_endstop(print_time)
+        self.last_state = res
         gcmd.respond_info("probe: %s" % (["open", "TRIGGERED"][not not res],))
+    def get_status(self, eventtime):
+        return {'last_query': self.last_state}
     cmd_PROBE_ACCURACY_help = "Probe Z-height accuracy at current XY position"
     def cmd_PROBE_ACCURACY(self, gcmd):
         speed = gcmd.get_float("PROBE_SPEED", self.speed, above=0.)
@@ -338,6 +344,9 @@ class ProbePointsHelper:
         if len(self.probe_points) < n:
             raise self.printer.config_error(
                 "Need at least %d probe points for %s" % (n, self.name))
+    def update_probe_points(self, points, min_points):
+        self.probe_points = points
+        self.minimum_points(min_points)
     def use_xy_offsets(self, use_offsets):
         self.use_offsets = use_offsets
     def get_lift_speed(self):

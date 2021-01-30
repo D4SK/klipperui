@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 # Main code for host side printer firmware
 #
-# Copyright (C) 2016-2018  Kevin O'Connor <kevin@koconnor.net>
+# Copyright (C) 2016-2020  Kevin O'Connor <kevin@koconnor.net>
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
-import sys, os, optparse, logging, time, threading, collections, importlib
-import util, reactor, queuelogger, msgproto, homing
-import gcode, configfile, pins, mcu, toolhead, webhooks, traceback
+import sys, os, gc, optparse, logging, time, collections, importlib
+import util, reactor, queuelogger, msgproto
+import gcode, configfile, pins, mcu, toolhead, webhooks
+import signal, traceback
 from subprocess import Popen
 
 message_ready = "Printer is ready"
@@ -48,11 +49,12 @@ Printer is shutdown
 
 class Printer:
     config_error = configfile.error
-    command_error = homing.CommandError
-    def __init__(self, bglogger, start_args):
+    command_error = gcode.CommandError
+    def __init__(self, main_reactor, bglogger, start_args):
+        signal.signal(signal.SIGTERM, self._terminate)
         self.bglogger = bglogger
         self.start_args = start_args
-        self.reactor = reactor.Reactor()
+        self.reactor = main_reactor
         self.reactor.register_callback(self._connect)
         self.state_message = message_startup
         self.in_shutdown_state = False
@@ -181,7 +183,8 @@ class Printer:
                 cb()
         except Exception as e:
             logging.exception("Unhandled exception during ready callback")
-            self.invoke_shutdown("Internal error during ready callback: %s" % (str(e),))
+            self.invoke_shutdown("Internal error during ready callback: %s"
+                                 % (str(e),))
     def run(self):
         systime = time.time()
         monotime = self.reactor.monotonic()
@@ -229,6 +232,8 @@ class Printer:
                 cb()
             except:
                 logging.exception("Exception during shutdown handler")
+        logging.info("Reactor garbage collection: %s",
+                     self.reactor.get_gc_stats())
     def invoke_async_shutdown(self, msg):
         self.reactor.register_async_callback(
             (lambda e: self.invoke_shutdown(msg)))
@@ -240,6 +245,10 @@ class Printer:
         if self.run_result is None:
             self.run_result = result
         self.reactor.end()
+    def _terminate(self, signalnum, frame):
+        """Called on SIGTERM"""
+        logging.info("Received SIGTERM, shutting down...")
+        self.request_exit("Terminated")
 
 
 ######################################################################
@@ -311,25 +320,20 @@ def main():
     elif not options.debugoutput:
         logging.warning("No log file specified!"
                         " Severe timing issues may result!")
+    gc.disable()
 
     # Start Printer() class
-    while 1:
-        if bglogger is not None:
-            bglogger.clear_rollover_info()
-            bglogger.set_rollover_info('versions', versions)
+    if bglogger is not None:
+        bglogger.clear_rollover_info()
+        bglogger.set_rollover_info('versions', versions)
+    gc.collect()
+    main_reactor = reactor.Reactor(gc_checking=True)
+    res = Printer(main_reactor, bglogger, start_args).run()
 
-        res = Printer(bglogger, start_args).run()
-
-        if bglogger is not None:
-            bglogger.stop()
-
-        if res in ('restart', 'firmware_restart'):
-            time.sleep(1.)
-            # Restart Systemd service if it exists otherwise restart with while loop
-            Popen(['sudo', 'systemctl', 'restart', 'klipper.service']).wait()
-        elif res == 'exit':
-            Popen(['sudo', 'systemctl', 'stop', 'klipper.service']).wait()
-
+    if bglogger is not None:
+        bglogger.stop()
+    if res == "firmware_restart":
+        Popen(['sudo', 'systemctl', 'restart', 'klipper'])
 
 
 if __name__ == '__main__':
