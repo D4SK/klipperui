@@ -1,50 +1,40 @@
-# Printjob manager (based on VirtualSDCard) providing API for local printjobs
+# Printjob manager providing API for local printjobs
 # with pause-resume, cura-style compressed gcode, and queue functionality 
 #
 # Copyright (C) 2020  Konstantin Vogel <konstantin.vogel@gmx.net>
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
-import os, logging
-from zipfile import ZipFile
+import logging
+import os
 
 
 class Printjob:
-    def __init__(self, path, production_line_mode, manager):
+    def __init__(self, path, manager, no_pause):
         self.manager = manager
         self.reactor = manager.reactor
         self.toolhead = manager.toolhead
         self.gcode = manager.gcode
         self.printer = manager.printer
         self.heater_manager = manager.heater_manager
+        self.gcode_metadata = manager.gcode_metadata
+
         self.path = path
         self.state = None
-        self.production_line_mode = production_line_mode # if True dont pause when starting the next job from q
         self.set_state('queued') # queued -> printing -> pausing -> paused -> printing -> done
         self.file_position = 0 #                    -> stopping -> stopped
-        self.saved_pause_state = False
-        self.start_stop_times = []
+        self.no_pause = True if not manager.jobs else no_pause
+        self.additional_printed_time = 0 # elapsed print time before the last pause
+        self.last_start_time = 0
         self.name, ext = os.path.splitext(os.path.basename(path))
-        try: # opening the file, with on the fly decompression in case of .ufp file
-            if ext in ('.gco', '.gcode'):
-                self.thumbnail_path = None
-                self.file_obj = open(self.path, 'rb')
-                self.file_obj.seek(0, os.SEEK_END)
-                self.file_size = self.file_obj.tell()
-                self.file_obj.seek(0)
-            elif ext == '.ufp':
-                zip_obj = ZipFile(path)
-                self.thumbnail_path = path.replace('.ufp', '.png')
-                with open(self.thumbnail_path, 'wb') as thumbnail:
-                    thumbnail.write(zip_obj.read("/Metadata/thumbnail.png"))
-                self.file_obj = zip_obj.open("/3D/model.gcode", 'r')
-                self.file_obj.seek(0, os.SEEK_END)
-                self.file_size = self.file_obj.tell()
-                self.file_obj.seek(0)
-        except:
+
+        try:
+            self.md = self.gcode_metadata.get_metadata(self.path)
+            self.file_obj = self.md.get_gcode_stream()
+            self.file_size = self.md.get_file_size()
+        except (ValueError, FileNotFoundError) as e:
             self.printer.send_event("klippy:error", f"Failed opening file {self.path}")
-            logging.exception(f"Failed opening {ext} file")
+            logging.exception(f"Failed opening {ext} file: {e}")
             self.set_state('stopped')
-            self.manager.check_queue()
 
     def set_state(self, state):
         if self.state != state:
@@ -53,11 +43,13 @@ class Printjob:
 
     def start(self):
         if self.state == 'queued':
-            if self.production_line_mode:
+            if self.no_pause:
+                self.last_start_time = self.toolhead.mcu.estimated_print_time(self.reactor.monotonic())
+                # set_state only after last_start_time is set but before entering work handler
                 self.set_state('printing')
-                self.start_stop_times.append([self.toolhead.mcu.estimated_print_time(self.reactor.monotonic()), None])
                 self.work_timer = self.reactor.register_timer(self.work_handler, self.reactor.NOW)
             else:
+                self.gcode.run_script_from_command("SAVE_GCODE_STATE STATE=PAUSE_STATE")
                 self.set_state('paused')
             self.printer.send_event("virtual_sdcard:printjob_start", self)
 
@@ -65,11 +57,9 @@ class Printjob:
         if self.state == 'pausing':
             self.set_state('printing')
         elif self.state == 'paused':
-            if self.saved_pause_state:
-                self.saved_pause_state = False
-                self.gcode.run_script_from_command("RESTORE_GCODE_STATE STATE=PAUSE_STATE MOVE=1")
+            self.gcode.run_script_from_command("RESTORE_GCODE_STATE STATE=PAUSE_STATE MOVE=1")
+            self.last_start_time = self.toolhead.mcu.estimated_print_time(self.reactor.monotonic())
             self.set_state('printing')
-            self.start_stop_times.append([self.toolhead.mcu.estimated_print_time(self.reactor.monotonic()), None])
             self.work_timer = self.reactor.register_timer(self.work_handler, self.reactor.NOW)
 
     def pause(self):
@@ -138,12 +128,11 @@ class Printjob:
             self.file_position += len(lines.pop()) + 1
 
         logging.info(f"Exiting SD card print in state {self.state} position {self.file_position}")
-        self.start_stop_times[-1][1] = self.toolhead.get_last_move_time()
+        self.additional_printed_time += self.toolhead.get_last_move_time() - self.last_start_time
         # Finish stopping or pausing actions
         if self.state == 'pausing':
-            self.set_state('paused')
             self.gcode.run_script_from_command("SAVE_GCODE_STATE STATE=PAUSE_STATE")
-            self.saved_pause_state = True
+            self.set_state('paused')
         else:
             if self.state == 'stopping':
                 self.set_state('stopped')
@@ -157,10 +146,9 @@ class Printjob:
         # also doesnt use print time since it doesnt advance continuously
         if not print_time:
             print_time = self.toolhead.mcu.estimated_print_time(self.reactor.monotonic())
-        printed_time = 0
-        for time in self.start_stop_times:
-            printed_time += - time[0] + (time[1] if time[1] else print_time)
-        return printed_time
+        if self.state in ("printing", "pausing", "stopping"):
+            return self.additional_printed_time + print_time - self.last_start_time
+        return self.additional_printed_time
 
 
 class PrintjobManager:
@@ -170,18 +158,19 @@ class PrintjobManager:
         self.reactor = self.printer.get_reactor()
         self.gcode = self.printer.lookup_object('gcode')
         self.heater_manager = self.printer.lookup_object('heaters')
+        self.gcode_metadata = self.printer.load_object(config, 'gcode_metadata') # beware this is not the 'right' config
         self.printer.load_object(config, 'print_stats')
         self.printer.register_event_handler("klippy:ready", self.handle_ready)
         self.printer.register_event_handler("klippy:shutdown", self.handle_shutdown)
         self.jobs = [] # Printjobs, first is current
 
-    def add_printjob(self, path, paused=True):
+    def add_printjob(self, path, no_pause=False):
         """ add new printjob to queue """
-        job = Printjob(path, paused, self)
+        job = Printjob(path, self, no_pause)
         self.jobs.append(job)
+        self.check_queue()
         self.printer.send_event("virtual_sdcard:printjob_change", self.jobs)
         self.printer.send_event("virtual_sdcard:printjob_added", job)
-        self.check_queue()
 
     def pause_printjob(self, *args):
         self.jobs[0].pause()

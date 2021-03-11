@@ -134,11 +134,8 @@ DECL_CONSTANT_STR("RESERVE_PINS_crystal", "PH0,PH1");
 static void
 clock_setup(void)
 {
-    // see https://github.com/apache/incubator-nuttx/blob/cdd111a1faec9b40b707797e00c4afae4956fb3f/arch/arm/src/stm32h7/stm32h7x3xx_rcc.c
-    // and https://github.com/stm32-rs/stm32h7xx-hal/blob/master/src/pwr.rs
-    // Set this despite defaults being correct. "The software has to program the supply configuration in PWR control register 3" (pg. 259)
+    // Set this despite correct defaults. "The software has to program the supply configuration in PWR control register 3" (pg. 259)
     // Only a single write is allowed (pg. 304)
-    //if (PWR->CR3 & PWR_CR3_SCUEN)
     PWR->CR3 = (PWR->CR3 | PWR_CR3_LDOEN) & ~(PWR_CR3_BYPASS | PWR_CR3_SCUEN);
     while (!(PWR->CSR1 & PWR_CSR1_ACTVOSRDY))
         ;
@@ -158,7 +155,7 @@ clock_setup(void)
         MODIFY_REG(RCC->PLLCKSELR, RCC_PLLCKSELR_PLLSRC_Msk, RCC_PLLCKSELR_PLLSRC_HSI);
         MODIFY_REG(RCC->PLLCKSELR, RCC_PLLCKSELR_DIVM1_Msk, (64000000 / pll_base) << RCC_PLLCKSELR_DIVM1_Pos);
     }
-    MODIFY_REG(RCC->PLLCFGR, RCC_PLLCFGR_PLL1FRACEN, 0); // Default should already be 0
+    MODIFY_REG(RCC->PLLCFGR, RCC_PLLCFGR_PLL1FRACEN_Msk, 0); // Default should already be 0
     MODIFY_REG(RCC->PLLCFGR, RCC_PLLCFGR_PLL1VCOSEL_Msk, 0); // Default should already be 0
     // Set input frequency range of PLL1 according to pll_base (3=8-16Mhz, 2=4-8Mhz)
     MODIFY_REG(RCC->PLLCFGR, RCC_PLLCFGR_PLL1RGE_Msk, RCC_PLLCFGR_PLL1RGE_2);
@@ -173,16 +170,17 @@ clock_setup(void)
     MODIFY_REG(PWR->D3CR, PWR_D3CR_VOS_Msk, PWR_D3CR_VOS);
     while (!(PWR->D3CR & PWR_D3CR_VOSRDY))
         ;
-    // Enable VOS0 (overdrive), only relevant for revision V or later @480mhz 
+    // Enable VOS0 (overdrive)
     RCC->APB4ENR |= RCC_APB4ENR_SYSCFGEN;
     SYSCFG->PWRCR |= SYSCFG_PWRCR_ODEN;
     while (!(PWR->D3CR & PWR_D3CR_VOSRDY))
         ;
 
     // Set flash latency according to clock frequency (pg.159)
-    MODIFY_REG(FLASH->ACR, FLASH_ACR_LATENCY_Msk, FLASH_ACR_LATENCY_2WS);
+    uint32_t flash_acr_latency = (CONFIG_CLOCK_FREQ > 450000000) ? FLASH_ACR_LATENCY_4WS : FLASH_ACR_LATENCY_2WS; 
+    MODIFY_REG(FLASH->ACR, FLASH_ACR_LATENCY_Msk, flash_acr_latency);
     MODIFY_REG(FLASH->ACR, FLASH_ACR_WRHIGHFREQ_Msk, FLASH_ACR_WRHIGHFREQ_1);
-    while (!(FLASH->ACR & FLASH_ACR_LATENCY_2WS))
+    while (!(FLASH->ACR & flash_acr_latency))
         ;
 
     // Switch on PLL1

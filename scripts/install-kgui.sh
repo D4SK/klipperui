@@ -11,7 +11,7 @@ PYTHONDIR="${SRCDIR}/klippy-environment"
 install_packages()
 {
     # Packages for python cffi
-    PKGLIST="python3-virtualenv virtualenv python3-dev libffi-dev build-essential"
+    PKGLIST="python3-dev libffi-dev build-essential"
     # kconfig requirements
     PKGLIST="${PKGLIST} libncurses-dev"
     # hub-ctrl
@@ -39,12 +39,9 @@ install_packages()
     libjpeg-dev \
     xclip \
     xsel \
-    mtdev-tools xorg  \
-    xserver-xorg-video-fbturbo \
     git \
     git-core \
     python3-dev \
-    python-pil \
     python3-venv \
     python3-setuptools \
     python3-pip"
@@ -83,9 +80,6 @@ install_packages()
     x11proto-video-dev \
     x11proto-xinerama-dev"
 
-    # Kivy SDL2
-    PKGLIST="${PKGLIST} libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev"
-
     # Wifi
     PKGLIST="${PKGLIST} network-manager python3-gi"
     # Usb Stick Automounting
@@ -97,6 +91,43 @@ install_packages()
     # Install desired packages
     report_status "Installing packages..."
     sudo apt-get install -qq --yes ${PKGLIST}
+
+    # Install SDL2 from source
+    report_status "Installing SDL2 from source"
+    wget https://libsdl.org/release/SDL2-2.0.10.tar.gz
+    tar -zxvf SDL2-2.0.10.tar.gz
+    pushd SDL2-2.0.10
+    ./configure --enable-video-kmsdrm --disable-video-opengl --disable-video-x11 --disable-video-rpi
+    make -j$(nproc)
+    sudo make install
+    popd
+
+    wget https://libsdl.org/projects/SDL_image/release/SDL2_image-2.0.5.tar.gz
+    tar -zxvf SDL2_image-2.0.5.tar.gz
+    pushd SDL2_image-2.0.5
+    ./configure
+    make -j$(nproc)
+    sudo make install
+    popd
+
+    wget https://libsdl.org/projects/SDL_mixer/release/SDL2_mixer-2.0.4.tar.gz
+    tar -zxvf SDL2_mixer-2.0.4.tar.gz
+    pushd SDL2_mixer-2.0.4
+    ./configure
+    make -j$(nproc)
+    sudo make install
+    popd
+
+    wget https://libsdl.org/projects/SDL_ttf/release/SDL2_ttf-2.0.15.tar.gz
+    tar -zxvf SDL2_ttf-2.0.15.tar.gz
+    pushd SDL2_ttf-2.0.15
+    ./configure
+    make -j$(nproc)
+    sudo make install
+    popd
+
+    sudo ldconfig -v
+    sudo adduser "${USER}" render
 
     # Install stm32flash from source
     report_status "Installing stm32flash from source..."
@@ -116,9 +147,7 @@ install_packages()
     if [ $(grep -c auth-polkit= /etc/NetworkManager/NetworkManager.conf) -eq 0 ]; then
         sudo sed -i '/\[main\]/a auth-polkit=false' /etc/NetworkManager/NetworkManager.conf
     fi
-    # change line in Xwrapper.config so xorg feels inclined to start when asked by systemd
-    sudo sed -i 's/allowed_users=console/allowed_users=anybody/' /etc/X11/Xwrapper.config
-    # -i for in place (just modify file), s for substitute (this line)
+
 }
 
 
@@ -144,7 +173,6 @@ install_klipper_service()
     sudo /bin/sh -c "cat > /etc/systemd/system/klipper.service" <<EOF
 [Unit]
 Description="Klipper with GUI"
-Requires=start_xorg.service
 
 [Service]
 Type=simple
@@ -158,22 +186,6 @@ RestartSec=10
 [Install]
 WantedBy=multi-user.target
 EOF
-    sudo /bin/sh -c "cat > /etc/systemd/system/start_xorg.service" <<EOF
-[Unit]
-Description="Starts Xorg"
-Requires=multi-user.target
-
-[Service]
-Type=simple
-User=$USER
-ExecStart=startx
-
-[Install]
-WantedBy=multi-user.target
-EOF
-    # -v option in ExecStart is for debugging information
-    sudo systemctl daemon-reload
-    sudo systemctl enable klipper.service
 }
 
 
