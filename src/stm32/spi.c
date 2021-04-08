@@ -56,12 +56,12 @@ static const struct spi_info spi_bus[] = {
 #endif
 };
 
-
 struct spi_config
 spi_setup(uint32_t bus, uint8_t mode, uint32_t rate)
 {
     if (bus >= ARRAY_SIZE(spi_bus))
         shutdown("Invalid spi bus");
+
     // Enable SPI
     SPI_TypeDef *spi = spi_bus[bus].spi;
     if (!is_enabled_pclock((uint32_t)spi)) {
@@ -69,6 +69,7 @@ spi_setup(uint32_t bus, uint8_t mode, uint32_t rate)
         gpio_peripheral(spi_bus[bus].miso_pin, spi_bus[bus].function, 1);
         gpio_peripheral(spi_bus[bus].mosi_pin, spi_bus[bus].function, 0);
         gpio_peripheral(spi_bus[bus].sck_pin, spi_bus[bus].function, 0);
+
         // Configure CR2 on stm32f0
 #if CONFIG_MACH_STM32F0
         spi->CR2 = SPI_CR2_FRXTH | (7 << SPI_CR2_DS_Pos);

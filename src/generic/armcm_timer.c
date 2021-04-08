@@ -39,8 +39,6 @@ timer_set_diff(uint32_t value)
     SysTick->LOAD = 0;
 }
 
-
-
 // Return the current time (in absolute clock ticks).
 uint32_t
 timer_read_time(void)
@@ -92,49 +90,18 @@ timer_reset(void)
 }
 DECL_SHUTDOWN(timer_reset);
 
-#define DWT_LSR_SLK_Pos                1
-#define DWT_LSR_SLK_Msk                (1UL << DWT_LSR_SLK_Pos)
-// CoreSight Lock Status Register lock availability bit
-#define DWT_LSR_SLI_Pos                0
-#define DWT_LSR_SLI_Msk                (1UL << DWT_LSR_SLI_Pos)
-// CoreSight Lock Access key, common for all
-
-static void 
-dwt_access_enable(int ena)
-{
-    uint32_t lsr = DWT->LSR;
-    if ((lsr & DWT_LSR_SLI_Msk) != 0)
-    {
-        if (ena)
-        {
-            if ((lsr & DWT_LSR_SLK_Msk) != 0)    //locked: access need unlock
-                DWT->LAR = 0xC5ACCE55;
-        }
-        else
-        {
-            if ((lsr & DWT_LSR_SLK_Msk) == 0)    //unlocked
-                DWT->LAR = 0;
-        }
-    }
-}
-
 void
 timer_init(void)
 {
-    //output("timer_init");
-    //dwt_access_enable(1);
-
     // Enable Debug Watchpoint and Trace (DWT) for its 32bit timer
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
 
-    // DWT->LAR = 0xC5ACCE55; // <-- added unlock access to DWT (ITM, etc.)registers 
+    DWT->LAR = 0xC5ACCE55; // <-- added unlock access to DWT (ITM, etc.)registers 
     DWT->CYCCNT = 0;
-    dwt_access_enable(1);
-
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
-    while( DWT->CYCCNT < 1000000)
-        ;
+    // while( DWT->CYCCNT < 1000000)
+    //     ;
 
     // Schedule a recurring timer on fast cpus
     timer_reset();
@@ -144,6 +111,7 @@ timer_init(void)
     NVIC_SetPriority(SysTick_IRQn, 2);
     SysTick->CTRL = (SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk
                      | SysTick_CTRL_ENABLE_Msk);
+    // Just for debugging
     // while (!((SysTick->CTRL & SysTick_CTRL_CLKSOURCE_Msk) && 
     //          (SysTick->CTRL & SysTick_CTRL_TICKINT_Msk) &&
     //          (SysTick->CTRL & SysTick_CTRL_ENABLE_Msk)))
