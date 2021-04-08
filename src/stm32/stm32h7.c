@@ -129,7 +129,17 @@ gpio_peripheral(uint32_t gpio, uint32_t mode, int pullup)
 #if !CONFIG_STM32_CLOCK_REF_INTERNAL
 DECL_CONSTANT_STR("RESERVE_PINS_crystal", "PH0,PH1");
 #endif
-
+void
+wait()
+{
+    long long k;
+    long long i;
+    // for(i=0;i<(4);i++)
+    // {
+    //     k = k+1;
+    //     int j = 100;
+    // };
+}
 // Main clock and power setup called at chip startup
 static void
 clock_setup(void)
@@ -216,6 +226,18 @@ clock_setup(void)
     // Wait for PLL1 to be selected
     while ((RCC->CFGR & RCC_CFGR_SWS_Msk) != RCC_CFGR_SWS_PLL1)
         ;
+    wait();
+        // Enable Debug Watchpoint and Trace (DWT) for its 32bit timer
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->LAR = 0xC5ACCE55; // <-- added unlock access to DWT (ITM, etc.)registers 
+    DWT->CYCCNT = 0;
+    //dwt_access_enable(1);
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
+    while( DWT->CYCCNT < 1000000)
+        ;
+    output("Faults %u", (uint32_t)SCB->CFSR);
+
 }
 
 // Main entry point - called from armcm_boot.c:ResetHandler()

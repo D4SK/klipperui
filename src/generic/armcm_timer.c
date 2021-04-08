@@ -11,7 +11,7 @@
 #include "board/misc.h" // timer_from_us
 #include "command.h" // shutdown
 #include "sched.h" // sched_timer_dispatch
-#include "stdlib.h"
+
 DECL_CONSTANT("CLOCK_FREQ", CONFIG_CLOCK_FREQ);
 
 // Return the number of clock ticks for a given number of microseconds
@@ -39,6 +39,8 @@ timer_set_diff(uint32_t value)
     SysTick->LOAD = 0;
 }
 
+
+
 // Return the current time (in absolute clock ticks).
 uint32_t
 timer_read_time(void)
@@ -59,7 +61,6 @@ timer_kick(void)
 void
 udelay(uint32_t usecs)
 {
-    output("udelay");
     if (!(CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk)) {
         CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
         DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
@@ -87,19 +88,53 @@ timer_reset(void)
     if (timer_from_us(100000) <= 0xffffff)
         // Timer in sched.c already ensures SysTick wont overflow
         return;
-    output("sched_add_timer from timer_reset");
     sched_add_timer(&wrap_timer);
 }
 DECL_SHUTDOWN(timer_reset);
 
+#define DWT_LSR_SLK_Pos                1
+#define DWT_LSR_SLK_Msk                (1UL << DWT_LSR_SLK_Pos)
+// CoreSight Lock Status Register lock availability bit
+#define DWT_LSR_SLI_Pos                0
+#define DWT_LSR_SLI_Msk                (1UL << DWT_LSR_SLI_Pos)
+// CoreSight Lock Access key, common for all
+
+static void 
+dwt_access_enable(int ena)
+{
+    uint32_t lsr = DWT->LSR;
+    if ((lsr & DWT_LSR_SLI_Msk) != 0)
+    {
+        if (ena)
+        {
+            if ((lsr & DWT_LSR_SLK_Msk) != 0)    //locked: access need unlock
+                DWT->LAR = 0xC5ACCE55;
+        }
+        else
+        {
+            if ((lsr & DWT_LSR_SLK_Msk) == 0)    //unlocked
+                DWT->LAR = 0;
+        }
+    }
+}
+
 void
 timer_init(void)
 {
-    output("timer_init");
+    //output("timer_init");
+    //dwt_access_enable(1);
+
     // Enable Debug Watchpoint and Trace (DWT) for its 32bit timer
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
+    // DWT->LAR = 0xC5ACCE55; // <-- added unlock access to DWT (ITM, etc.)registers 
     DWT->CYCCNT = 0;
+    dwt_access_enable(1);
+
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
+    while( DWT->CYCCNT < 1000000)
+        ;
 
     // Schedule a recurring timer on fast cpus
     timer_reset();
@@ -109,6 +144,10 @@ timer_init(void)
     NVIC_SetPriority(SysTick_IRQn, 2);
     SysTick->CTRL = (SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk
                      | SysTick_CTRL_ENABLE_Msk);
+    // while (!((SysTick->CTRL & SysTick_CTRL_CLKSOURCE_Msk) && 
+    //          (SysTick->CTRL & SysTick_CTRL_TICKINT_Msk) &&
+    //          (SysTick->CTRL & SysTick_CTRL_ENABLE_Msk)))
+    //          ;
     timer_kick();
     irq_restore(flag);
 }
@@ -129,6 +168,7 @@ timer_dispatch_many(void)
     for (;;) {
         // Run the next software timer
         uint32_t next = sched_timer_dispatch();
+
         uint32_t now = timer_read_time();
         int32_t diff = next - now;
         if (diff > (int32_t)TIMER_MIN_TRY_TICKS)
@@ -138,7 +178,13 @@ timer_dispatch_many(void)
         if (unlikely(timer_is_before(tru, now))) {
             // Check if there are too many repeat timers
             if (diff < (int32_t)(-timer_from_us(1000)))
-            output("Rescheduled timer diff %i000, next %u",diff/1000,next);
+                output("Faults %u", (uint32_t)SCB->CFSR);
+                output("cyccnt %u 00", DWT->CYCCNT/100);
+                while( DWT->CYCCNT > 100000)
+                    output("cyccnt %u 00", DWT->CYCCNT/100);
+
+                while( DWT->CYCCNT < 200000000)
+                    output("cyccnt %u 00", DWT->CYCCNT/100);
                 try_shutdown("Rescheduled timer in the past");
             if (sched_tasks_busy()) {
                 timer_repeat_until = now + TIMER_REPEAT_TICKS;
