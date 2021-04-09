@@ -228,15 +228,15 @@ run_tasks(void)
         // Check if can sleep
         if (tasks_status != TS_REQUESTED) {
             start -= timer_read_time();
-            irq_disable();
+            //irq_disable();
             if (tasks_status != TS_REQUESTED) {
                 // Sleep processor (only run timers) until tasks woken
                 tasks_status = TS_IDLE;
                 do {
-                    irq_wait();
+                    //irq_wait();
                 } while (tasks_status != TS_REQUESTED);
             }
-            irq_enable();
+            //irq_enable();
             start += timer_read_time();
         }
         tasks_status = TS_RUNNING;

@@ -109,7 +109,7 @@ gpio_adc_setup(uint32_t pin)
 uint32_t
 gpio_adc_sample(struct gpio_adc g)
 {
-    output("gpio_adc_sample");
+    //output("gpio_adc_sample");
     return 0;
 }
 /*

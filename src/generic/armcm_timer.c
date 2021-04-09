@@ -43,6 +43,7 @@ timer_set_diff(uint32_t value)
 uint32_t
 timer_read_time(void)
 {
+    DWT->LAR = 0xC5ACCE55;
     return DWT->CYCCNT;
 }
 
@@ -94,14 +95,23 @@ void
 timer_init(void)
 {
     // Enable Debug Watchpoint and Trace (DWT) for its 32bit timer
-    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    static int dwt_started = 0;
+    if(dwt_started == 0)
+    {
+        dwt_started = 1;
+        CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+        DWT->LAR = 0xC5ACCE55;
+        DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+        DWT->CYCCNT = 0;
+        DWT->LAR = 0xC5ACCE55;
+        DWT->SLEEPCNT = 33;
+        MODIFY_REG(SCB->SCR, SCB_SCR_SLEEPONEXIT_Msk, 0);
 
-    DWT->LAR = 0xC5ACCE55; // <-- added unlock access to DWT (ITM, etc.)registers 
-    DWT->CYCCNT = 0;
-    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
-
-    // while( DWT->CYCCNT < 1000000)
+    }
+    // output("cyccnt before while %u 00", DWT->CYCCNT/100);
+    // while( DWT->CYCCNT < 400000000*1)
     //     ;
+    // output("cyccnt after while %u 00", DWT->CYCCNT/100);
 
     // Schedule a recurring timer on fast cpus
     timer_reset();
@@ -132,6 +142,8 @@ static uint32_t timer_repeat_until;
 static uint32_t
 timer_dispatch_many(void)
 {
+    DWT->LAR = 0xC5ACCE55;
+    //output("cyccnt %u 00", timer_read_time()/100);
     uint32_t tru = timer_repeat_until;
     for (;;) {
         // Run the next software timer
@@ -146,13 +158,14 @@ timer_dispatch_many(void)
         if (unlikely(timer_is_before(tru, now))) {
             // Check if there are too many repeat timers
             if (diff < (int32_t)(-timer_from_us(1000)))
+                // wait_cycles();
+                // output("cyccnt before while %u 00", timer_read_time()/100);
+                // while( timer_read_time() < 400000000*1)
+                //     ;
+                // output("cyccnt after while %u 00", timer_read_time()/100);
                 output("Faults %u", (uint32_t)SCB->CFSR);
-                output("cyccnt %u 00", DWT->CYCCNT/100);
-                while( DWT->CYCCNT > 100000)
-                    output("cyccnt %u 00", DWT->CYCCNT/100);
-
-                while( DWT->CYCCNT < 200000000)
-                    output("cyccnt %u 00", DWT->CYCCNT/100);
+                output("cyccnt %u 00", timer_read_time()/100);
+                output("sleepcnt %u 00", DWT->SLEEPCNT/100);
                 try_shutdown("Rescheduled timer in the past");
             if (sched_tasks_busy()) {
                 timer_repeat_until = now + TIMER_REPEAT_TICKS;

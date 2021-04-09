@@ -216,6 +216,30 @@ clock_setup(void)
     // Wait for PLL1 to be selected
     while ((RCC->CFGR & RCC_CFGR_SWS_Msk) != RCC_CFGR_SWS_PLL1)
         ;
+    //MODIFY_REG(SCB->SCR, SCB_SCR_SLEEPONEXIT_Msk, 0);
+    MODIFY_REG(SCB->SCR, SCB_SCR_SLEEPDEEP_Msk, 0);
+
+}
+
+void 
+wait_cycles(void) {
+    output("cyccnt before cycles %u 00", DWT->CYCCNT/100);
+    uint64_t l = 1000000*1;
+    asm volatile( "0:" "SUBS %[count], 1;" "BNE 0b;" :[count]"+r"(l) );
+    output("cyccnt after cycles %u 00", DWT->CYCCNT/100);
+
+}
+
+void
+wait_cyccnt(void){
+    output("CYCCNT BEFORE WHILE %u 00", timer_read_time()/100);
+    while( timer_read_time() < 400000000*1)
+        ;
+    while( timer_read_time() > 400000000*1)
+        ;
+    while( timer_read_time() < 400000000*1)
+        ;
+    output("CYCCNT AFTER WHILE %u 00", timer_read_time()/100);
 }
 
 // Main entry point - called from armcm_boot.c:ResetHandler()
